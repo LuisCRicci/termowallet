@@ -18,7 +18,7 @@ Sistema completo de gestión de finanzas personales que permite:
 
 | Componente | Tecnología | Versión |
 |------------|------------|---------|
-| **Framework UI** | Flet | 0.21.0 |
+| **Framework UI** | Flet | 0.28.2 |
 | **Base de Datos** | SQLite + SQLAlchemy | 2.0.23 |
 | **Procesamiento** | Pandas | 2.1.0 |
 | **Visualización** | Plotly | 5.18.0 |
@@ -37,17 +37,20 @@ Sistema completo de gestión de finanzas personales que permite:
 
 ```bash
 # 1. Clonar repositorio
-git clone https://github.com/tu-usuario/expense-dashboard.git
-cd expense-dashboard
+git clone https://github.com/LuisCRicci/termowallet.git
 
-# 2. Crear entorno virtual
-python -m venv venv
+# 2. Ejemplos para crear entorno virtual
+python3.10 -m venv env310
+python3.11 -m venv mi_entorno
+
 
 # 3. Activar entorno virtual
 # Windows:
-venv\Scripts\activate
+.\mi_entorno\Scripts\activate
 # Mac/Linux:
-source venv/bin/activate
+source mi_entorno/bin/activate
+
+Una vez activado, verás el nombre del entorno en tu terminal.
 
 # 4. Instalar dependencias
 pip install -r requirements.txt
@@ -107,9 +110,12 @@ expense-dashboard/
 │
 ├── docs/
 │   └── user_manual.md         # Manual de usuario
+│   └── user_manual.PDF        # Manual de usuario
 │
 ├── requirements.txt
+├── LICENSE
 └── README.md
+
 ```
 
 ---
@@ -220,8 +226,9 @@ Tasa de Ahorro = (Ahorro / Ingresos) × 100%
 1. **Preparar archivo CSV o Excel:**
    ```csv
    fecha,descripcion,monto
-   2024-10-28,Supermercado,150.50
-   2024-10-27,Taxi,12.00
+   30-10-2025,sueldo-neto,2500.00
+   28-10-2025,Supermercado,150.50
+   27-10-2025,Taxi,12.00
    ```
 
 2. **En la app:**
@@ -266,6 +273,7 @@ Tasa de Ahorro = (Ahorro / Ingresos) × 100%
 3. **Eliminar categoría:**
    - Solo categorías sin transacciones
    - Categorías predeterminadas no se pueden eliminar
+   - Datos involucrados se recategorizan
 
 ---
 
@@ -275,10 +283,13 @@ Tasa de Ahorro = (Ahorro / Ingresos) × 100%
 
 Las categorías usan códigos hexadecimales:
 ```python
+'#e9f413ff'  # Amarillo
+'#f59e0b'  # Mostaza
+'#f5360bff'  # Naranja
 '#ef4444'  # Rojo
+'#8ceb7eff'  # Verde
 '#3b82f6'  # Azul
-'#10b981'  # Verde
-'#f59e0b'  # Naranja
+'#d36fe8ff'  # rosado
 '#8b5cf6'  # Morado
 ```
 
@@ -286,8 +297,11 @@ Las categorías usan códigos hexadecimales:
 
 Usa cualquier emoji Unicode:
 ```
-💰 🍔 🚗 🎮 💡 ⚕️ 📚 🏠 🛍️ 📦
-💵 💼 📈 🏪 🎁
+💰 🍔 🚗 🎮 💡 ⚕️ 📚 🏠 🛍️ 📦 
+💵 💼 📈 🏪 🎁 ⚙️ 🚨 👤 🧪 💬
+👨‍🍳 🤷‍♀️ 🛒 📋 🧽 🤖 ❄️ 👷‍♂️ ☕️ 💅 
+🌲 🍪 🗺 🎞 🧑‍💻 🛬 🐞 ❤️ 💳 🎓
+
 ```
 
 ---
@@ -358,9 +372,9 @@ Este proyecto es parte de un trabajo académico de Ciencia de Datos e Inteligenc
 
 ## 👥 Equipo de Desarrollo
 
-- **Desarrollo:** [Tu Nombre]
-- **Gestión de Proyecto:** [Nombre]
-- **Testing:** [Nombre]
+- **Desarrollo:** LuisCRicci 
+- **Gestión de Proyecto:** Karen
+- **Testing:**  [Nombre]
 
 ---
 

@@ -385,7 +385,7 @@ Este proyecto es parte de un trabajo académico de Ciencia de Datos e Inteligenc
 
 1. Luis Alberto Cusy Ricci 
 2. Jancarlos Froilan Linares Sagastizabal
-3. 
+3. Luz Marina Vega Calderón
 4. 
 5. 
 6. 

@@ -1,2 +1,391 @@
-# termowallet
-Aplicación con dashboard de análisis de gastos personales
+# 💰 TermoWallet
+
+**Aplicación móvil Android para control financiero personal**
+
+## 📋 Descripción
+
+Sistema completo de gestión de finanzas personales que permite:
+- ✅ Registrar gastos e ingresos manualmente
+- ✅ Importar transacciones desde CSV/Excel
+- ✅ Categorizar automáticamente los movimientos
+- ✅ Visualizar estadísticas y gráficos interactivos
+- ✅ Calcular ahorros mensuales
+- ✅ Gestionar categorías personalizadas
+
+---
+
+## 🛠️ Tecnologías Utilizadas
+
+| Componente | Tecnología | Versión |
+|------------|------------|---------|
+| **Framework UI** | Flet | 0.21.0 |
+| **Base de Datos** | SQLite + SQLAlchemy | 2.0.23 |
+| **Procesamiento** | Pandas | 2.1.0 |
+| **Visualización** | Plotly | 5.18.0 |
+| **Lenguaje** | Python | 3.10+ |
+
+---
+
+## 🚀 Instalación
+
+### Requisitos Previos
+- Python 3.10 o superior
+- pip (gestor de paquetes)
+- Git (opcional)
+
+### Pasos de Instalación
+
+```bash
+# 1. Clonar repositorio
+git clone https://github.com/tu-usuario/expense-dashboard.git
+cd expense-dashboard
+
+# 2. Crear entorno virtual
+python -m venv venv
+
+# 3. Activar entorno virtual
+# Windows:
+venv\Scripts\activate
+# Mac/Linux:
+source venv/bin/activate
+
+# 4. Instalar dependencias
+pip install -r requirements.txt
+
+# 5. Ejecutar aplicación
+flet run src/main.py
+```
+
+---
+
+## 📱 Ejecución en Android
+
+### Opción 1: Emulador (Desarrollo)
+
+```bash
+# Abrir emulador de Android Studio primero
+flet run --android src/main.py
+```
+
+### Opción 2: Dispositivo Real
+
+```bash
+# 1. Generar APK
+flet build apk src/main.py
+
+# 2. Ubicación del APK
+# build/apk/expense-dashboard.apk
+
+# 3. Transferir al dispositivo e instalar
+# Habilitar "Instalar apps desconocidas" en Ajustes
+```
+
+---
+
+## 📂 Estructura del Proyecto
+
+```
+expense-dashboard/
+│
+├── src/
+│   ├── main.py                 # Aplicación principal Flet
+│   ├── data/
+│   │   ├── models.py          # Modelos SQLAlchemy
+│   │   └── database.py        # Gestor de BD
+│   ├── business/
+│   │   ├── processor.py       # Procesamiento CSV/Excel
+│   │   └── categorizer.py     # Categorización automática
+│   └── utils/
+│       └── config.py          # Configuraciones
+│
+├── data/
+│   ├── expenses.db            # Base de datos SQLite
+│   └── sample_data.csv        # Datos de ejemplo
+│
+├── tests/
+│   └── test_database.py       # Tests unitarios
+│
+├── docs/
+│   └── user_manual.md         # Manual de usuario
+│
+├── requirements.txt
+└── README.md
+```
+
+---
+
+## 🎯 Funcionalidades Principales
+
+### 1. Gestión de Transacciones
+
+**Ingreso Manual:**
+- Formulario intuitivo para gastos e ingresos
+- Campos: monto, descripción, categoría, fecha, notas
+- Validación de datos en tiempo real
+
+**Importación de Archivos:**
+- Soporta CSV y Excel (.xlsx, .xls)
+- Detección automática de columnas (fecha, descripción, monto)
+- Limpieza y validación de datos
+- Categorización automática basada en palabras clave
+
+### 2. Categorización Inteligente
+
+**Categorías Predeterminadas:**
+
+**Gastos:**
+- 🍔 Alimentación
+- 🚗 Transporte
+- 🎮 Entretenimiento
+- 💡 Servicios
+- ⚕️ Salud
+- 📚 Educación
+- 🏠 Vivienda
+- 🛍️ Compras
+- 📦 Otros Gastos
+
+**Ingresos:**
+- 💵 Salario
+- 💼 Freelance
+- 📈 Inversiones
+- 🏪 Ventas
+- 🎁 Bonos
+- 💰 Otros Ingresos
+
+**Categorías Personalizadas:**
+- Crear nuevas categorías
+- Asignar colores e iconos personalizados
+- Diferenciar entre gastos e ingresos
+
+### 3. Visualizaciones y Reportes
+
+**Dashboard Mensual:**
+- Tarjetas de resumen (Ingresos, Gastos, Ahorros)
+- Tasa de ahorro con indicador visual
+- Transacciones recientes
+
+**Gráficos:**
+- Distribución de gastos por categoría (barras)
+- Distribución de ingresos por categoría (barras)
+- Tendencia mensual de los últimos 6 meses
+
+**Historial Completo:**
+- Lista cronológica (más reciente primero)
+- Agrupación por día
+- Filtros por mes
+- Opciones de edición y eliminación
+
+### 4. Cálculo de Ahorros
+
+```
+Ahorro = Total Ingresos - Total Gastos
+Tasa de Ahorro = (Ahorro / Ingresos) × 100%
+```
+
+- Resumen mensual automático
+- Indicador visual de cumplimiento de metas
+- Historial de 6 meses para análisis de tendencias
+
+---
+
+## 📊 Uso de la Aplicación
+
+### Pantalla Principal (Home)
+
+1. **Visualizar resumen del mes actual:**
+   - Ingresos totales
+   - Gastos totales
+   - Ahorro generado
+   - Tasa de ahorro
+
+2. **Navegar entre meses:**
+   - Usar flechas ← → para ver meses anteriores/siguientes
+
+3. **Ver transacciones recientes:**
+   - Últimas 5 transacciones del mes
+
+### Añadir Transacción
+
+1. **Seleccionar tipo:** Gasto o Ingreso
+2. **Completar formulario:**
+   - Monto (obligatorio)
+   - Descripción (obligatorio)
+   - Categoría (seleccionar de lista)
+   - Fecha (selector de calendario)
+   - Notas (opcional)
+3. **Guardar:** Toca el botón "Guardar Transacción"
+
+### Importar desde Archivo
+
+1. **Preparar archivo CSV o Excel:**
+   ```csv
+   fecha,descripcion,monto
+   2024-10-28,Supermercado,150.50
+   2024-10-27,Taxi,12.00
+   ```
+
+2. **En la app:**
+   - Ir a "Añadir"
+   - Tocar "Importar desde archivo"
+   - Seleccionar archivo
+   - Confirmar importación
+
+3. **Revisión automática:**
+   - Validación de formato
+   - Limpieza de datos
+   - Categorización inteligente
+   - Confirmación de cantidad importada
+
+### Ver Historial
+
+1. **Navegar a "Historial"**
+2. **Revisar transacciones por día**
+3. **Cambiar de mes** con flechas
+4. **Eliminar transacción:**
+   - Tocar icono de papelera
+   - Confirmar eliminación
+
+### Analizar Gráficos
+
+1. **Navegar a "Gráficos"**
+2. **Interpretar visualizaciones:**
+   - Barras por categoría: identifica dónde gastas más
+   - Tendencia mensual: observa patrones de gasto
+   - Comparación ingresos vs gastos
+
+### Gestionar Categorías
+
+1. **Navegar a "Categorías"**
+2. **Crear nueva categoría:**
+   - Tocar botón "+"
+   - Ingresar nombre y descripción
+   - Seleccionar tipo (Gasto/Ingreso)
+   - Elegir emoji y color
+   - Guardar
+
+3. **Eliminar categoría:**
+   - Solo categorías sin transacciones
+   - Categorías predeterminadas no se pueden eliminar
+
+---
+
+## 🎨 Personalización
+
+### Colores de Categorías
+
+Las categorías usan códigos hexadecimales:
+```python
+'#ef4444'  # Rojo
+'#3b82f6'  # Azul
+'#10b981'  # Verde
+'#f59e0b'  # Naranja
+'#8b5cf6'  # Morado
+```
+
+### Iconos Emoji
+
+Usa cualquier emoji Unicode:
+```
+💰 🍔 🚗 🎮 💡 ⚕️ 📚 🏠 🛍️ 📦
+💵 💼 📈 🏪 🎁
+```
+
+---
+
+## 🧪 Testing
+
+### Tests Unitarios
+
+```bash
+# Ejecutar todos los tests
+python -m unittest discover tests/
+
+# Test específico
+python -m unittest tests.test_database
+```
+
+### Generar Datos de Prueba
+
+```bash
+python scripts/generate_test_data.py
+```
+
+---
+
+## 📈 Roadmap
+
+### Versión 1.0 (Actual)
+- [x] CRUD de transacciones
+- [x] Importación CSV/Excel
+- [x] Categorización automática
+- [x] Visualizaciones básicas
+- [x] Gestión de categorías
+- [x] APK Android
+
+### Versión 1.1 (Próxima)
+- [ ] Autenticación de usuarios
+- [ ] Backup en la nube
+- [ ] Exportar reportes PDF
+- [ ] Modo oscuro/claro
+- [ ] Múltiples monedas
+
+### Versión 2.0 (Futuro)
+- [ ] Presupuestos mensuales
+- [ ] Alertas y notificaciones
+- [ ] Gastos recurrentes
+- [ ] Predicciones con ML
+- [ ] Sincronización multi-dispositivo
+
+---
+
+## 🤝 Contribuciones
+
+Las contribuciones son bienvenidas. Por favor:
+
+1. Fork el proyecto
+2. Crea una rama (`git checkout -b feature/nueva-funcionalidad`)
+3. Commit tus cambios (`git commit -m 'Añade nueva funcionalidad'`)
+4. Push a la rama (`git push origin feature/nueva-funcionalidad`)
+5. Abre un Pull Request
+
+---
+
+## 📄 Licencia
+
+Este proyecto es parte de un trabajo académico de Ciencia de Datos e Inteligencia Artificial.
+
+---
+
+## 👥 Equipo de Desarrollo
+
+- **Desarrollo:** [Tu Nombre]
+- **Gestión de Proyecto:** [Nombre]
+- **Testing:** [Nombre]
+
+---
+
+## 📞 Soporte
+
+¿Problemas o preguntas?
+- 📧 Email: soporte@expense-dashboard.com
+- 📱 Issues: [GitHub Issues](https://github.com/tu-usuario/expense-dashboard/issues)
+
+---
+
+## 🙏 Agradecimientos
+
+- **Flet Framework** por la facilidad de desarrollo móvil
+- **SQLAlchemy** por el ORM robusto
+- **Pandas** por el procesamiento de datos
+- Comunidad de Python por las excelentes librerías
+
+---
+
+**Desarrollado con ❤️  con la contribucion de:**
+
+1. Luis Alberto Cusy Ricci 
+2. 
+3. 
+4. 
+5. 
+6. 

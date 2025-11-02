@@ -329,12 +329,12 @@ python scripts/generate_test_data.py
 ## 📈 Roadmap
 
 ### Versión 1.0 (Actual)
-- [x] CRUD de transacciones
-- [x] Importación CSV/Excel
-- [x] Categorización automática
-- [x] Visualizaciones básicas
-- [x] Gestión de categorías
-- [x] APK Android
+- [ ] CRUD de transacciones
+- [ ] Importación CSV/Excel
+- [ ] Categorización automática
+- [ ] Visualizaciones básicas
+- [ ] Gestión de categorías
+- [ ] APK Android
 
 ### Versión 1.1 (Próxima)
 - [ ] Autenticación de usuarios

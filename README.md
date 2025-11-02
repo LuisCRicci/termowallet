@@ -384,7 +384,7 @@ Este proyecto es parte de un trabajo académico de Ciencia de Datos e Inteligenc
 **Desarrollado con ❤️  con la contribucion de:**
 
 1. Luis Alberto Cusy Ricci 
-2. 
+2. Jancarlos Froilan Linares Sagastizabal
 3. 
 4. 
 5. 

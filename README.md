@@ -18,11 +18,13 @@ Sistema completo de gestión de finanzas personales que permite:
 
 | Componente | Tecnología | Versión |
 |------------|------------|---------|
-| **Framework UI** | Flet | 0.28.2 |
-| **Base de Datos** | SQLite + SQLAlchemy | 2.0.23 |
-| **Procesamiento** | Pandas | 2.1.0 |
-| **Visualización** | Plotly | 5.18.0 |
+| **Framework UI** | Flet | 0.28.3 |
+| **Base de Datos** | SQLAlchemy | 2.0.44 |
+| **Base de Datos** | SQLite3 | 3.50.4 |
+| **Procesamiento** | Pandas | 2.3.3 |
+| **Visualización** | Plotly | 6.3.1 |
 | **Lenguaje** | Python | 3.10+ |
+| **Base de Datos** | openpyxl| 3.1.5 |
 
 ---
 
@@ -77,7 +79,7 @@ flet run --android src/main.py
 flet build apk src/main.py
 
 # 2. Ubicación del APK
-# build/apk/expense-dashboard.apk
+# build/apk/termowallet.apk
 
 # 3. Transferir al dispositivo e instalar
 # Habilitar "Instalar apps desconocidas" en Ajustes
@@ -88,33 +90,38 @@ flet build apk src/main.py
 ## 📂 Estructura del Proyecto
 
 ```
-expense-dashboard/
-│
-├── src/
-│   ├── main.py                 # Aplicación principal Flet
-│   ├── data/
-│   │   ├── models.py          # Modelos SQLAlchemy
-│   │   └── database.py        # Gestor de BD
-│   ├── business/
-│   │   ├── processor.py       # Procesamiento CSV/Excel
-│   │   └── categorizer.py     # Categorización automática
-│   └── utils/
-│       └── config.py          # Configuraciones
-│
-├── data/
-│   ├── expenses.db            # Base de datos SQLite
-│   └── sample_data.csv        # Datos de ejemplo
-│
-├── tests/
-│   └── test_database.py       # Tests unitarios
-│
-├── docs/
-│   └── user_manual.md         # Manual de usuario
-│   └── user_manual.PDF        # Manual de usuario
-│
-├── requirements.txt
-├── LICENSE
-└── README.md
+── README.md                    # Documentación del proyecto
+├── requirements.txt             # Dependencias Python
+├── .gitignore                   # Archivos a ignorar en Git
+├── .env.example                 # Variables de entorno ejemplo
+├── data/                        # Base de datos SQLite
+│   └── expenses.db              # (se crea automáticamente)
+├── docs/                        # Documentación adicional
+├── tests/                       # Tests unitarios
+│   └── __init__.py
+└── src/                         # Código fuente
+    ├── __init__.py
+    ├── main.py                  # Punto de entrada principal
+    ├── models/                  # Modelos de datos (ORM)
+    │   ├── __init__.py
+    │   ├── database.py          # Configuración SQLAlchemy
+    │   ├── transaction.py       # Modelo Transaction
+    │   └── category.py          # Modelo Category
+    ├── views/                   # Vistas de la UI (Flet)
+    │   ├── __init__.py
+    │   ├── home_view.py         # Vista principal
+    │   ├── transactions_view.py # Gestión de transacciones
+    │   ├── dashboard_view.py    # Gráficos y análisis
+    │   ├── import_view.py       # Importar CSV/Excel
+    │   └── categories_view.py   # Gestión de categorías
+    ├── services/                # Lógica de negocio
+    │   ├── __init__.py
+    │   ├── transaction_service.py
+    │   └── category_service.py
+    └── utils/                   # Utilidades
+        ├── __init__.py
+        ├── csv_processor.py     # Procesamiento CSV/Excel
+        └── categorizer.py       # Auto-categorización
 
 ```
 
@@ -366,7 +373,7 @@ Las contribuciones son bienvenidas. Por favor:
 
 ## 📄 Licencia
 
-Este proyecto es parte de un trabajo académico de Ciencia de Datos e Inteligencia Artificial.
+Este proyecto es parte de un trabajo académico de Ciencia de Datos e Inteligencia Artificial con licencia MIT.
 
 ---
 
@@ -374,15 +381,15 @@ Este proyecto es parte de un trabajo académico de Ciencia de Datos e Inteligenc
 
 - **Desarrollo:** LuisCRicci 
 - **Gestión de Proyecto:** Karen
-- **Testing:**  [Nombre]
+- **Testing:**  jancoyk
 
 ---
 
 ## 📞 Soporte
 
 ¿Problemas o preguntas?
-- 📧 Email: soporte@expense-dashboard.com
-- 📱 Issues: [GitHub Issues](https://github.com/tu-usuario/expense-dashboard/issues)
+- 📧 Email: soporte@termowallet.com
+- 📱 Issues: [GitHub Issues](https://github.com/LuisCRicci/termowallet/issues)
 
 ---
 

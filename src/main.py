@@ -3,6 +3,7 @@ Aplicación Principal - Dashboard de Gastos Personales
 Archivo: src/main.py
 
 Ejecutar con: flet run src/main.py
+VERSIÓN CORREGIDA PARA FLET 0.28.3+
 """
 
 import flet as ft
@@ -491,8 +492,9 @@ class ExpenseTrackerApp:
             if not self.category_dropdown.value:
                 self.show_snackbar("Debes seleccionar una categoría", error=True)
                 return
-
+            # Usar 'or ""' para garantizar que el valor sea str, no None.
             date_str = self.date_field.value or ""
+
             self.db.add_transaction(
                 date=datetime.strptime(date_str, "%Y-%m-%d"),
                 description=self.description_field.value.strip(),
@@ -871,7 +873,7 @@ class ExpenseTrackerApp:
                                                 weight=ft.FontWeight.BOLD,
                                             ),
                                         ],
-                                        spacing=8,
+                                        spacing=5,
                                     ),
                                     ft.Text(
                                         f"{Config.CURRENCY_SYMBOL} {item['total']:.2f}",
@@ -893,7 +895,7 @@ class ExpenseTrackerApp:
                         ],
                         spacing=5,
                     ),
-                    padding=15,
+                    padding=10,
                     margin=ft.margin.only(bottom=10),
                 )
             )
@@ -907,8 +909,9 @@ class ExpenseTrackerApp:
                     ft.Container(height=10),
                     ft.Column(bars),
                 ],
+                spacing=5,
             ),
-            padding=20,
+            padding=15,
             bgcolor=ft.Colors.WHITE,
             border_radius=10,
         )
@@ -924,13 +927,11 @@ class ExpenseTrackerApp:
                 ft.Container(
                     content=ft.Row(
                         [
-                            ft.Container(
-                                content=ft.Text(
-                                    m["month_name"][:3],
-                                    size=12,
-                                    weight=ft.FontWeight.BOLD,
-                                ),
-                                width=50,
+                            ft.Text(
+                                f"{m['month_name'][:3]}",
+                                size=12,
+                                weight=ft.FontWeight.BOLD,
+                                width=40,
                             ),
                             ft.Column(
                                 [
@@ -966,25 +967,22 @@ class ExpenseTrackerApp:
                                 expand=True,
                                 spacing=2,
                             ),
-                            ft.Column(
-                                [
-                                    ft.Text(
-                                        f"{m['savings_rate']:.0f}%",
-                                        size=16,
-                                        weight=ft.FontWeight.BOLD,
-                                        color=savings_rate_color,
-                                    ),
-                                    ft.Text(
-                                        "ahorro", size=10, color=ft.Colors.GREY_600
-                                    ),
-                                ],
-                                horizontal_alignment=ft.CrossAxisAlignment.END,
+                            ft.Container(
+                                content=ft.Text(
+                                    f"{m['savings_rate']:.0f}%",
+                                    size=14,
+                                    weight=ft.FontWeight.BOLD,
+                                    color=savings_rate_color,
+                                ),
+                                bgcolor=f"{savings_rate_color}20",
+                                padding=8,
+                                border_radius=8,
                             ),
                         ],
                         alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                     ),
-                    padding=12,
-                    margin=ft.margin.only(bottom=8),
+                    padding=10,
+                    margin=ft.margin.only(bottom=5),
                     bgcolor="#f9fafb",
                     border_radius=8,
                 )
@@ -994,13 +992,16 @@ class ExpenseTrackerApp:
             content=ft.Column(
                 [
                     ft.Text(
-                        "📈 Tendencia de 6 Meses", size=18, weight=ft.FontWeight.BOLD
+                        "📈 Tendencia Mensual (6 meses)",
+                        size=18,
+                        weight=ft.FontWeight.BOLD,
                     ),
                     ft.Container(height=10),
                     ft.Column(trend_items),
                 ],
+                spacing=5,
             ),
-            padding=20,
+            padding=15,
             bgcolor=ft.Colors.WHITE,
             border_radius=10,
         )
@@ -1067,14 +1068,22 @@ class ExpenseTrackerApp:
                         width=60,
                         height=60,
                         border_radius=30,
-                        bgcolor=category.color + "30",
+                        bgcolor=f"{category.color}30",
                         alignment=ft.alignment.center,
                     ),
                     ft.Column(
                         [
-                            ft.Text(category.name, size=16, weight=ft.FontWeight.BOLD),
                             ft.Text(
-                                category.description or "Sin descripción",
+                                category.name if category.name else "Sin categoría",
+                                size=16,
+                                weight=ft.FontWeight.BOLD,
+                            ),
+                            ft.Text(
+                                (
+                                    category.description
+                                    if category.description
+                                    else "Sin descripción"
+                                ),
                                 size=12,
                                 color=ft.Colors.GREY_600,
                             ),
@@ -1115,10 +1124,18 @@ class ExpenseTrackerApp:
 
     def show_add_category_dialog(self, e):
         """Muestra diálogo para añadir categoría"""
-        name_field = ft.TextField(label="Nombre", autofocus=True)
-        desc_field = ft.TextField(label="Descripción", multiline=True)
-        icon_field = ft.TextField(label="Icono (emoji)", value="💰")
-        color_field = ft.TextField(label="Color (hex)", value="#3b82f6")
+        name_field = ft.TextField(
+            label="Nombre", autofocus=True, bgcolor=ft.Colors.WHITE
+        )
+        desc_field = ft.TextField(
+            label="Descripción", multiline=True, bgcolor=ft.Colors.WHITE
+        )
+        icon_field = ft.TextField(
+            label="Icono (emoji)", value="💰", bgcolor=ft.Colors.WHITE
+        )
+        color_field = ft.TextField(
+            label="Color (hex)", value="#3b82f6", bgcolor=ft.Colors.WHITE
+        )
         type_dropdown = ft.Dropdown(
             label="Tipo",
             options=[
@@ -1126,6 +1143,7 @@ class ExpenseTrackerApp:
                 ft.dropdown.Option(key="income", text="Ingreso"),
             ],
             value="expense",
+            bgcolor=ft.Colors.WHITE,
         )
 
         def save_category(e):
@@ -1153,6 +1171,7 @@ class ExpenseTrackerApp:
                 [name_field, desc_field, icon_field, color_field, type_dropdown],
                 tight=True,
                 scroll=ft.ScrollMode.AUTO,
+                height=400,
             ),
             actions=[
                 ft.TextButton("Cancelar", on_click=lambda _: self.close_dialog()),
@@ -1166,12 +1185,21 @@ class ExpenseTrackerApp:
 
     def show_edit_category_dialog(self, category):
         """Muestra diálogo para editar categoría"""
-        name_field = ft.TextField(label="Nombre", value=category.name)
-        desc_field = ft.TextField(
-            label="Descripción", value=category.description or "", multiline=True
+        name_field = ft.TextField(
+            label="Nombre", value=category.name, bgcolor=ft.Colors.WHITE
         )
-        icon_field = ft.TextField(label="Icono (emoji)", value=category.icon)
-        color_field = ft.TextField(label="Color (hex)", value=category.color)
+        desc_field = ft.TextField(
+            label="Descripción",
+            value=category.description or "",
+            multiline=True,
+            bgcolor=ft.Colors.WHITE,
+        )
+        icon_field = ft.TextField(
+            label="Icono (emoji)", value=category.icon, bgcolor=ft.Colors.WHITE
+        )
+        color_field = ft.TextField(
+            label="Color (hex)", value=category.color, bgcolor=ft.Colors.WHITE
+        )
 
         def update_category(e):
             if not name_field.value:
@@ -1198,6 +1226,7 @@ class ExpenseTrackerApp:
                 [name_field, desc_field, icon_field, color_field],
                 tight=True,
                 scroll=ft.ScrollMode.AUTO,
+                height=350,
             ),
             actions=[
                 ft.TextButton("Cancelar", on_click=lambda _: self.close_dialog()),
@@ -1259,11 +1288,7 @@ class ExpenseTrackerApp:
         """Cierra el diálogo actual"""
         if self.page.overlay and len(self.page.overlay) > 0:
             dialog = next(
-                (
-                    control
-                    for control in self.page.overlay
-                    if isinstance(control, ft.AlertDialog)
-                ),
+                (c for c in self.page.overlay if isinstance(c, ft.AlertDialog)),
                 None,
             )
             if dialog:
@@ -1274,12 +1299,14 @@ class ExpenseTrackerApp:
 
 def main(page: ft.Page):
     """Función principal"""
+    # Configuración inicial
     page.window.width = 400
     page.window.height = 700
     page.theme_mode = ft.ThemeMode.LIGHT
+    page.bgcolor = "#f5f5f5"
 
+    # Inicializar app
     app = ExpenseTrackerApp(page)
-    page.update()
 
 
 if __name__ == "__main__":

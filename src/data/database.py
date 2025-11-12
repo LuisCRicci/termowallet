@@ -1,5 +1,5 @@
 """
-Gestor de Base de Datos - VERSIÓN COMPLETA
+Gestor de Base de Datos - VERSIÓN COMPLETA CON LIMPIEZA
 Archivo: src/data/database.py
 """
 
@@ -141,6 +141,71 @@ class DatabaseManager:
 
             self.session.add_all(default_categories)
             self.session.commit()
+
+    # ========== LIMPIEZA DE BASE DE DATOS ==========
+
+    def clear_all_transactions(self) -> bool:
+        """Elimina TODAS las transacciones de la base de datos"""
+        try:
+            self.session.query(Transaction).delete()
+            self.session.commit()
+            return True
+        except Exception as e:
+            self.session.rollback()
+            print(f"Error al limpiar transacciones: {e}")
+            return False
+
+    def clear_custom_categories(self) -> bool:
+        """Elimina SOLO las categorías personalizadas (mantiene las predeterminadas)"""
+        try:
+            self.session.query(Category).filter(Category.is_default == False).delete()
+            self.session.commit()
+            return True
+        except Exception as e:
+            self.session.rollback()
+            print(f"Error al limpiar categorías personalizadas: {e}")
+            return False
+
+    def reset_database(self) -> bool:
+        """Resetea completamente la base de datos (transacciones + categorías personalizadas)"""
+        try:
+            # Eliminar transacciones
+            self.session.query(Transaction).delete()
+            # Eliminar categorías personalizadas
+            self.session.query(Category).filter(Category.is_default == False).delete()
+            # Eliminar presupuestos
+            self.session.query(MonthlyBudget).delete()
+            self.session.commit()
+            return True
+        except Exception as e:
+            self.session.rollback()
+            print(f"Error al resetear base de datos: {e}")
+            return False
+
+    def get_database_stats(self) -> Dict:
+        """Obtiene estadísticas de la base de datos"""
+        try:
+            return {
+                "total_transactions": self.session.query(Transaction).count(),
+                "total_categories": self.session.query(Category).count(),
+                "custom_categories": self.session.query(Category)
+                .filter(Category.is_default == False)
+                .count(),
+                "default_categories": self.session.query(Category)
+                .filter(Category.is_default == True)
+                .count(),
+                "total_expenses": self.session.query(func.sum(Transaction.amount))
+                .filter(Transaction.transaction_type == "expense")
+                .scalar()
+                or 0.0,
+                "total_income": self.session.query(func.sum(Transaction.amount))
+                .filter(Transaction.transaction_type == "income")
+                .scalar()
+                or 0.0,
+            }
+        except Exception as e:
+            print(f"Error al obtener estadísticas: {e}")
+            return {}
 
     # ========== TRANSACCIONES ==========
 
@@ -301,20 +366,14 @@ class DatabaseManager:
         return category
 
     def update_category(self, category_id: int, **kwargs) -> Optional[Category]:
-        """Actualiza una categoría y deja que el modelo maneje updated_at"""
-
+        """Actualiza una categoría"""
         category = self.get_category_by_id(category_id)
 
         if category:
-            # 1. Aplicar las actualizaciones dinámicas
             for key, value in kwargs.items():
                 if hasattr(category, key):
                     setattr(category, key, value)
 
-            # LÍNEA ELIMINADA: Ya no se necesita asignar updated_at
-            # category.updated_at = datetime.now()
-
-            # 2. El commit() activa el onupdate=datetime.now en el modelo Category
             self.session.commit()
             return category
 
@@ -440,8 +499,6 @@ class DatabaseManager:
 
     def get_monthly_trend(self, months: int = 6) -> List[Dict]:
         """Obtiene tendencia de ingresos/gastos de los últimos N meses"""
-        # Esta es una implementación simplificada
-        # En producción, usarías una consulta más sofisticada
         results = []
         current_date = datetime.now()
 

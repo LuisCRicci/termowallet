@@ -13,6 +13,7 @@ import sys
 # Agregar el directorio raíz del proyecto al path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from src.data.models import Base, Category, Transaction, MonthlyBudget
+from src.utils.config import Config
 
 
 class DatabaseManager:
@@ -20,7 +21,7 @@ class DatabaseManager:
 
     def __init__(self, db_path: str = "termowallet.db"):
         """Inicializa la conexión a la base de datos"""
-        self.db_path = db_path
+        self.db_path = db_path or Config.get_db_path()
         self.engine = create_engine(f"sqlite:///{db_path}", echo=False)
         Base.metadata.create_all(self.engine)
 
@@ -36,7 +37,12 @@ class DatabaseManager:
             default_categories = [
                 # Categorías de Gastos
                 Category(
-                    name="Alimentación", icon="🍔", color="#ef4444", category_type="expense", is_default=True, description="Comida, restaurantes, supermercado",
+                    name="Alimentación",
+                    icon="🍔",
+                    color="#ef4444",
+                    category_type="expense",
+                    is_default=True,
+                    description="Comida, restaurantes, supermercado",
                 ),
                 Category(
                     name="Transporte",
@@ -47,38 +53,93 @@ class DatabaseManager:
                     description="Uber, gasolina, taxi, bus",
                 ),
                 Category(
-                    name="Entretenimiento", icon="🎮", color="#a855f7", category_type="expense", is_default=True, description="Cine, streaming, juegos",
+                    name="Entretenimiento",
+                    icon="🎮",
+                    color="#a855f7",
+                    category_type="expense",
+                    is_default=True,
+                    description="Cine, streaming, juegos",
                 ),
                 Category(
-                    name="Servicios", icon="💡", color="#eab308", category_type="expense", is_default=True, description="Luz, agua, internet, teléfono",
+                    name="Servicios",
+                    icon="💡",
+                    color="#eab308",
+                    category_type="expense",
+                    is_default=True,
+                    description="Luz, agua, internet, teléfono",
                 ),
                 Category(
-                    name="Salud", icon="⚕️", color="#22c55e", category_type="expense", is_default=True, description="Farmacia, doctor, clínica",
+                    name="Salud",
+                    icon="⚕️",
+                    color="#22c55e",
+                    category_type="expense",
+                    is_default=True,
+                    description="Farmacia, doctor, clínica",
                 ),
                 Category(
-                    name="Educación", icon="📚", color="#3b82f6", category_type="expense", is_default=True, description="Cursos, libros, universidad",
+                    name="Educación",
+                    icon="📚",
+                    color="#3b82f6",
+                    category_type="expense",
+                    is_default=True,
+                    description="Cursos, libros, universidad",
                 ),
                 Category(
-                    name="Vivienda",icon="🏠", color="#84cc16",category_type="expense", is_default=True, description="Alquiler, reparaciones, mantenimiento",
+                    name="Vivienda",
+                    icon="🏠",
+                    color="#84cc16",
+                    category_type="expense",
+                    is_default=True,
+                    description="Alquiler, reparaciones, mantenimiento",
                 ),
                 Category(
-                    name="Compras", icon="🛍️", color="#ec4899", category_type="expense", is_default=True, description="Ropa, zapatos, accesorios",
+                    name="Compras",
+                    icon="🛍️",
+                    color="#ec4899",
+                    category_type="expense",
+                    is_default=True,
+                    description="Ropa, zapatos, accesorios",
                 ),
                 Category(
-                    name="Otros Gastos", icon="💸", color="#6b7280", category_type="expense", is_default=True, description="Gastos varios",
+                    name="Otros Gastos",
+                    icon="💸",
+                    color="#6b7280",
+                    category_type="expense",
+                    is_default=True,
+                    description="Gastos varios",
                 ),
                 # Categorías de Ingresos
                 Category(
-                    name="Salario", icon="💰", color="#10b981", category_type="income", is_default=True, description="Sueldo mensual",
+                    name="Salario",
+                    icon="💰",
+                    color="#10b981",
+                    category_type="income",
+                    is_default=True,
+                    description="Sueldo mensual",
                 ),
                 Category(
-                    name="Freelance", icon="💼", color="#06b6d4",category_type="income", is_default=True, description="Trabajos independientes",
+                    name="Freelance",
+                    icon="💼",
+                    color="#06b6d4",
+                    category_type="income",
+                    is_default=True,
+                    description="Trabajos independientes",
                 ),
                 Category(
-                    name="Inversiones", icon="📈",color="#8b5cf6",category_type="income", is_default=True, description="Dividendos, intereses",
+                    name="Inversiones",
+                    icon="📈",
+                    color="#8b5cf6",
+                    category_type="income",
+                    is_default=True,
+                    description="Dividendos, intereses",
                 ),
                 Category(
-                    name="Otros Ingresos", icon="💵", color="#14b8a6", category_type="income",is_default=True,description="Ingresos varios",
+                    name="Otros Ingresos",
+                    icon="💵",
+                    color="#14b8a6",
+                    category_type="income",
+                    is_default=True,
+                    description="Ingresos varios",
                 ),
             ]
 
@@ -457,6 +518,236 @@ class DatabaseManager:
             results.append(summary)
 
         return list(reversed(results))
+
+    """
+    NUEVOS MÉTODOS PARA AGREGAR A: src/data/database.py
+    Agregar estos métodos dentro de la clase DatabaseManager, 
+    justo antes del método close() al final del archivo
+    """
+
+    def get_top_expenses(self, year: int, month: int, limit: int = 5) -> List[Dict]:
+        """Obtiene los gastos más grandes del mes"""
+        results = (
+            self.session.query(Transaction, Category)
+            .join(Category)
+            .filter(
+                Transaction.transaction_type == "expense",
+                extract("year", Transaction.date) == year,
+                extract("month", Transaction.date) == month,
+            )
+            .order_by(Transaction.amount.desc())
+            .limit(limit)
+            .all()
+        )
+
+        return [
+            {
+                "description": t.description,
+                "amount": float(t.amount),
+                "date": t.date,
+                "category_name": c.name,
+                "category_icon": c.icon,
+                "category_color": c.color,
+            }
+            for t, c in results
+        ]
+
+    def get_daily_average(self, year: int, month: int) -> Dict:
+        """Calcula el promedio de gasto diario del mes"""
+        from calendar import monthrange
+
+        total_expenses = (
+            self.session.query(func.sum(Transaction.amount))
+            .filter(
+                Transaction.transaction_type == "expense",
+                extract("year", Transaction.date) == year,
+                extract("month", Transaction.date) == month,
+            )
+            .scalar()
+            or 0.0
+        )
+
+        # Obtener días del mes
+        days_in_month = monthrange(year, month)[1]
+
+        # Obtener día actual si es el mes actual
+        now = datetime.now()
+        if year == now.year and month == now.month:
+            days_passed = now.day
+        else:
+            days_passed = days_in_month
+
+        daily_avg = total_expenses / days_passed if days_passed > 0 else 0
+        projected_total = daily_avg * days_in_month
+
+        return {
+            "total_expenses": total_expenses,
+            "days_passed": days_passed,
+            "days_in_month": days_in_month,
+            "daily_average": daily_avg,
+            "projected_monthly": projected_total,
+        }
+
+    def get_week_comparison(self, year: int, month: int) -> Dict:
+        """Compara el gasto de esta semana con la semana pasada"""
+        from datetime import timedelta
+
+        now = datetime.now()
+
+        # Semana actual (últimos 7 días)
+        week_start = now - timedelta(days=7)
+        current_week_total = (
+            self.session.query(func.sum(Transaction.amount))
+            .filter(
+                Transaction.transaction_type == "expense",
+                Transaction.date >= week_start,
+                Transaction.date <= now,
+            )
+            .scalar()
+            or 0.0
+        )
+
+        # Semana anterior (días 8-14 atrás)
+        prev_week_start = now - timedelta(days=14)
+        prev_week_end = now - timedelta(days=7)
+        previous_week_total = (
+            self.session.query(func.sum(Transaction.amount))
+            .filter(
+                Transaction.transaction_type == "expense",
+                Transaction.date >= prev_week_start,
+                Transaction.date < prev_week_end,
+            )
+            .scalar()
+            or 0.0
+        )
+
+        # Calcular cambio porcentual
+        if previous_week_total > 0:
+            change_pct = (
+                (current_week_total - previous_week_total) / previous_week_total
+            ) * 100
+        else:
+            change_pct = 0 if current_week_total == 0 else 100
+
+        return {
+            "current_week": current_week_total,
+            "previous_week": previous_week_total,
+            "change_amount": current_week_total - previous_week_total,
+            "change_percentage": change_pct,
+            "is_increasing": current_week_total > previous_week_total,
+        }
+
+    def get_category_budget_status(self, year: int, month: int) -> List[Dict]:
+        """Obtiene el estado de gasto por categoría con límites sugeridos"""
+        expenses = self.get_expenses_by_category(year, month)
+
+        # Límites sugeridos por categoría (% del total)
+        suggested_limits = {
+            "Alimentación": 30,
+            "Transporte": 15,
+            "Vivienda": 30,
+            "Entretenimiento": 10,
+            "Servicios": 10,
+            "Salud": 5,
+            "Educación": 10,
+            "Compras": 15,
+            "Otros Gastos": 5,
+        }
+
+        if not expenses:
+            return []
+
+        total = sum(e["total"] for e in expenses)
+
+        result = []
+        for expense in expenses:
+            cat_name = expense["category"]
+            suggested_pct = suggested_limits.get(cat_name, 10)
+            suggested_amount = total * (suggested_pct / 100)
+            actual_pct = (expense["total"] / total * 100) if total > 0 else 0
+
+            result.append(
+                {
+                    "category": cat_name,
+                    "icon": expense["icon"],
+                    "color": expense["color"],
+                    "spent": expense["total"],
+                    "suggested_limit": suggested_amount,
+                    "percentage": actual_pct,
+                    "suggested_percentage": suggested_pct,
+                    "is_over_budget": actual_pct
+                    > (suggested_pct * 1.1),  # 10% de margen
+                    "budget_health": (
+                        "good"
+                        if actual_pct <= suggested_pct
+                        else (
+                            "warning" if actual_pct <= suggested_pct * 1.2 else "danger"
+                        )
+                    ),
+                }
+            )
+
+        return result
+
+    def get_spending_trend_last_days(self, days: int = 7) -> List[Dict]:
+        """Obtiene el gasto de los últimos N días para graficar tendencia"""
+        from datetime import timedelta
+
+        now = datetime.now()
+        results = []
+
+        for i in range(days):
+            target_date = now - timedelta(days=days - i - 1)
+
+            daily_total = (
+                self.session.query(func.sum(Transaction.amount))
+                .filter(
+                    Transaction.transaction_type == "expense",
+                    func.date(Transaction.date) == target_date.date(),
+                )
+                .scalar()
+                or 0.0
+            )
+
+            results.append(
+                {
+                    "date": target_date.date(),
+                    "day_name": target_date.strftime("%a"),
+                    "amount": float(daily_total),
+                }
+            )
+
+        return results
+
+    def get_transaction_count_by_type(self, year: int, month: int) -> Dict:
+        """Obtiene el conteo de transacciones por tipo"""
+        expense_count = (
+            self.session.query(func.count(Transaction.id))
+            .filter(
+                Transaction.transaction_type == "expense",
+                extract("year", Transaction.date) == year,
+                extract("month", Transaction.date) == month,
+            )
+            .scalar()
+            or 0
+        )
+
+        income_count = (
+            self.session.query(func.count(Transaction.id))
+            .filter(
+                Transaction.transaction_type == "income",
+                extract("year", Transaction.date) == year,
+                extract("month", Transaction.date) == month,
+            )
+            .scalar()
+            or 0
+        )
+
+        return {
+            "total": expense_count + income_count,
+            "expenses": expense_count,
+            "income": income_count,
+        }
 
     def close(self):
         """Cierra la conexión a la base de datos"""

@@ -12,7 +12,8 @@ import pandas as pd
 import os
 import sys
 
-sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+# Agregar el directorio raíz del proyecto al path
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from src.business.processor import TransactionProcessor
 

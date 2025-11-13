@@ -322,7 +322,11 @@ Usa cualquier emoji Unicode:
 python -m unittest discover tests/
 
 # Test específico
-python -m unittest tests.test_database
+python -m tests.test_database
+
+# Ejemplo test de labase de datos
+python -m tests.debug_db
+
 ```
 
 ### Generar Datos de Prueba

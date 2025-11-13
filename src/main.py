@@ -159,40 +159,24 @@ class ExpenseTrackerApp:
             )
 
             summary = self.db.get_monthly_summary(self.current_year, self.current_month)
-            print(f"✅ Summary obtenido: {summary}")
-
             expenses_by_category = self.db.get_expenses_by_category(
                 self.current_year, self.current_month
             )
-            print(f"✅ Gastos por categoría: {len(expenses_by_category)} categorías")
-
             top_expenses = self.db.get_top_expenses(
                 self.current_year, self.current_month, limit=3
             )
-            print(f"✅ Top gastos: {len(top_expenses)} transacciones")
-
             daily_stats = self.db.get_daily_average(
                 self.current_year, self.current_month
             )
-            print(f"✅ Estadísticas diarias: {daily_stats}")
-
             week_comparison = self.db.get_week_comparison(
                 self.current_year, self.current_month
             )
-            print(f"✅ Comparación semanal: {week_comparison}")
-
             recent_transactions = self.db.get_transactions_by_month(
                 self.current_year, self.current_month
             )[:3]
-            print(f"✅ Transacciones recientes: {len(recent_transactions)}")
 
         except Exception as e:
             print(f"❌ ERROR al obtener datos: {e}")
-            import traceback
-
-            traceback.print_exc()
-
-            # Datos por defecto si hay error
             summary = {
                 "total_income": 0,
                 "total_expenses": 0,
@@ -215,8 +199,6 @@ class ExpenseTrackerApp:
                 "is_increasing": False,
             }
             recent_transactions = []
-
-        
 
         # ===== SELECTOR DE MES =====
         month_label = get_month_name(self.current_month)
@@ -243,11 +225,8 @@ class ExpenseTrackerApp:
             alignment=ft.MainAxisAlignment.CENTER,
         )
 
-        # ===== TARJETAS DE RESUMEN PRINCIPALES =====
+        # ===== TARJETA PRINCIPAL DE BALANCE =====
         savings = summary.get("savings", 0)
-        savings_rate = summary.get("savings_rate", 0)
-
-        # Tarjeta grande de ahorro
         savings_card = ft.Container(
             content=ft.Column(
                 [
@@ -331,41 +310,107 @@ class ExpenseTrackerApp:
             ),
         )
 
-        # ===== MINI CARDS (ESTADÍSTICAS RÁPIDAS) =====
+        # ===== MINI CARDS =====
         mini_cards = ft.Row(
             [
                 # Promedio diario
-                self._create_mini_stat_card(
-                    "Gasto Diario Promedio",
-                    f"{Config.CURRENCY_SYMBOL} {daily_stats.get('daily_average', 0):.2f}",
-                    ft.Icons.CALENDAR_TODAY,
-                    "#3b82f6",
+                ft.Container(
+                    content=ft.Column(
+                        [
+                            ft.Row(
+                                [
+                                    ft.Icon(
+                                        ft.Icons.CALENDAR_TODAY,
+                                        size=24,
+                                        color="#3b82f6",
+                                    ),
+                                    ft.Text(
+                                        "Gasto Diario",
+                                        size=11,
+                                        color=ft.Colors.GREY_600,
+                                    ),
+                                ],
+                                spacing=5,
+                            ),
+                            ft.Text(
+                                f"{Config.CURRENCY_SYMBOL} {daily_stats.get('daily_average', 0):.2f}",
+                                size=20,
+                                weight=ft.FontWeight.BOLD,
+                                color="#3b82f6",
+                            ),
+                        ],
+                        spacing=5,
+                    ),
+                    padding=15,
+                    bgcolor=ft.Colors.WHITE,
+                    border_radius=12,
+                    expand=True,
+                    border=ft.border.all(1, ft.Colors.GREY_200),
                 ),
                 # Comparación semanal
-                self._create_mini_stat_card(
-                    "Esta Semana",
-                    f"{week_comparison.get('change_percentage', 0):+.1f}%",
-                    (
-                        ft.Icons.TRENDING_UP
-                        if not week_comparison.get("is_increasing", False)
-                        else ft.Icons.TRENDING_DOWN
+                ft.Container(
+                    content=ft.Column(
+                        [
+                            ft.Row(
+                                [
+                                    ft.Icon(
+                                        (
+                                            ft.Icons.TRENDING_UP
+                                            if not week_comparison.get(
+                                                "is_increasing", False
+                                            )
+                                            else ft.Icons.TRENDING_DOWN
+                                        ),
+                                        size=24,
+                                        color=(
+                                            "#22c55e"
+                                            if not week_comparison.get(
+                                                "is_increasing", False
+                                            )
+                                            else "#ef4444"
+                                        ),
+                                    ),
+                                    ft.Text(
+                                        "Esta Semana", size=11, color=ft.Colors.GREY_600
+                                    ),
+                                ],
+                                spacing=5,
+                            ),
+                            ft.Text(
+                                f"{week_comparison.get('change_percentage', 0):+.1f}%",
+                                size=20,
+                                weight=ft.FontWeight.BOLD,
+                                color=(
+                                    "#22c55e"
+                                    if not week_comparison.get("is_increasing", False)
+                                    else "#ef4444"
+                                ),
+                            ),
+                        ],
+                        spacing=5,
                     ),
-                    (
-                        "#22c55e"
-                        if not week_comparison.get("is_increasing", False)
-                        else "#ef4444"
-                    ),
-                    subtitle=f"{Config.CURRENCY_SYMBOL} {week_comparison.get('current_week', 0):.2f}",
+                    padding=15,
+                    bgcolor=ft.Colors.WHITE,
+                    border_radius=12,
+                    expand=True,
+                    border=ft.border.all(1, ft.Colors.GREY_200),
                 ),
             ],
             spacing=10,
-            wrap=True,
         )
 
-        # ===== TOP 3 GASTOS DEL MES =====
-        top_expenses_section = ft.Container()
+        # ===== ENSAMBLAR COMPONENTES =====
+        content_widgets = [
+            month_selector,
+            ft.Container(height=10),
+            savings_card,
+            ft.Container(height=15),
+            mini_cards,
+        ]
+
+        # ===== TOP 3 GASTOS =====
         if top_expenses:
-            top_expenses_section = ft.Container(
+            top_section = ft.Container(
                 content=ft.Column(
                     [
                         ft.Row(
@@ -393,12 +438,13 @@ class ExpenseTrackerApp:
                 bgcolor=ft.Colors.WHITE,
                 border_radius=12,
             )
+            content_widgets.extend([ft.Container(height=15), top_section])
 
-        # ===== PROYECCIÓN DEL MES =====
+        # ===== PROYECCIÓN =====
         projection_section = self._create_projection_card(daily_stats, summary)
+        content_widgets.extend([ft.Container(height=15), projection_section])
 
-        # ===== GASTOS POR CATEGORÍA (COMPACTO) =====
-        category_section = ft.Container()
+        # ===== CATEGORÍAS =====
         if expenses_by_category:
             category_section = ft.Container(
                 content=ft.Column(
@@ -415,7 +461,7 @@ class ExpenseTrackerApp:
                         ],
                         (
                             ft.TextButton(
-                                f"Ver todas las categorías ({len(expenses_by_category)})",
+                                f"Ver todas ({len(expenses_by_category)})",
                                 on_click=lambda _: (
                                     setattr(self.nav_bar, "selected_index", 3),
                                     self.load_charts_view(),
@@ -432,6 +478,7 @@ class ExpenseTrackerApp:
                 bgcolor=ft.Colors.WHITE,
                 border_radius=12,
             )
+            content_widgets.extend([ft.Container(height=15), category_section])
 
         # ===== TRANSACCIONES RECIENTES =====
         if recent_transactions:
@@ -441,7 +488,7 @@ class ExpenseTrackerApp:
                         ft.Row(
                             [
                                 ft.Text(
-                                    "🕐 Actividad Reciente",
+                                    "🕒 Actividad Reciente",
                                     size=18,
                                     weight=ft.FontWeight.BOLD,
                                 ),
@@ -497,36 +544,19 @@ class ExpenseTrackerApp:
                 border_radius=12,
             )
 
-        # ===== ENSAMBLAR VISTA =====
-        print("🔨 Ensamblando componentes de la vista...")
+        content_widgets.extend([ft.Container(height=15), recent_section])
+        content_widgets.append(ft.Container(height=30))  # Espacio final
 
+        # ===== ACTUALIZAR CONTENEDOR PRINCIPAL =====
         self.main_container.content = ft.Column(
-            [
-                month_selector,
-                ft.Container(height=5),
-                savings_card,
-                ft.Container(height=10),
-                mini_cards,
-                ft.Container(height=10),
-                top_expenses_section,
-                ft.Container(height=10),
-                projection_section,
-                ft.Container(height=10),
-                category_section,
-                ft.Container(height=10),
-                recent_section,
-                ft.Container(height=20),
-            ],
+            content_widgets,
             scroll=ft.ScrollMode.AUTO,
             expand=True,
             spacing=0,
         )
 
         print("✅ Vista HOME ensamblada correctamente")
-        print("🔄 Actualizando página...")
-
         self.page.update()
-
         print("✅ Página actualizada\n")
 
     # ===== MÉTODOS AUXILIARES PARA WIDGETS - VERSIÓN CORREGIDA =====

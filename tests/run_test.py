@@ -1,11 +1,12 @@
 """
-Script para ejecutar tests y verificar la instalación
-Archivo: run_tests.py
+Script para ejecutar todos los tests y verificaciones
+Archivo: tests/run_tests.py
 """
 
 import sys
 import os
 import unittest
+import subprocess
 
 
 # Colores para terminal
@@ -27,9 +28,14 @@ def print_header(text):
     print(f"{Colors.HEADER}{Colors.BOLD}{'='*60}{Colors.ENDC}\n")
 
 
+def print_step(step_num, description):
+    """Imprime un paso del proceso"""
+    print(f"{Colors.OKCYAN}[Paso {step_num}] {description}{Colors.ENDC}")
+
+
 def check_dependencies():
     """Verifica que todas las dependencias estén instaladas"""
-    print_header("Verificando Dependencias")
+    print_header("1. Verificando Dependencias")
 
     required_packages = ["flet", "sqlalchemy", "pandas", "plotly", "openpyxl"]
 
@@ -55,7 +61,7 @@ def check_dependencies():
 
 def check_structure():
     """Verifica la estructura del proyecto"""
-    print_header("Verificando Estructura del Proyecto")
+    print_header("2. Verificando Estructura del Proyecto")
 
     required_files = [
         "src/main.py",
@@ -85,33 +91,9 @@ def check_structure():
     return True
 
 
-def run_unit_tests():
-    """Ejecuta los tests unitarios"""
-    print_header("Ejecutando Tests Unitarios")
-
-    # Descubrir y ejecutar tests
-    loader = unittest.TestLoader()
-    start_dir = "tests"
-
-    if not os.path.exists(start_dir):
-        print(f"{Colors.WARNING}⚠ Directorio de tests no encontrado{Colors.ENDC}")
-        return False
-
-    suite = loader.discover(start_dir)
-    runner = unittest.TextTestRunner(verbosity=2)
-    result = runner.run(suite)
-
-    if result.wasSuccessful():
-        print(f"\n{Colors.OKGREEN}✓ Todos los tests pasaron exitosamente{Colors.ENDC}")
-        return True
-    else:
-        print(f"\n{Colors.FAIL}✗ Algunos tests fallaron{Colors.ENDC}")
-        return False
-
-
 def test_database_connection():
     """Prueba la conexión a la base de datos"""
-    print_header("Probando Base de Datos")
+    print_header("3. Probando Base de Datos")
 
     try:
         from src.data.database import DatabaseManager
@@ -154,35 +136,97 @@ def test_database_connection():
         return False
 
 
+def run_diagnostic():
+    """Ejecuta el diagnóstico de la base de datos"""
+    print_header("4. Diagnóstico de Base de Datos")
+
+    try:
+        # Ejecutar debug_db.py como módulo
+        from debug_db import diagnose_database
+
+        diagnose_database()
+        return True
+    except Exception as e:
+        print(f"{Colors.FAIL}✗ Error en diagnóstico: {e}{Colors.ENDC}")
+        return False
+
+
+def run_unit_tests():
+    """Ejecuta los tests unitarios"""
+    print_header("5. Ejecutando Tests Unitarios")
+
+    # Configurar path para los tests
+    sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+    # Descubrir y ejecutar tests
+    loader = unittest.TestLoader()
+    start_dir = os.path.dirname(__file__)
+
+    if not os.path.exists(start_dir):
+        print(f"{Colors.WARNING}⚠ Directorio de tests no encontrado{Colors.ENDC}")
+        return False
+
+    # Cargar tests específicos
+    test_suite = unittest.TestSuite()
+
+    # Cargar tests de base de datos
+    try:
+        from test_database import TestDatabaseManager
+
+        db_tests = loader.loadTestsFromTestCase(TestDatabaseManager)
+        test_suite.addTests(db_tests)
+        print(f"{Colors.OKGREEN}✓{Colors.ENDC} Tests de base de datos cargados")
+    except Exception as e:
+        print(f"{Colors.FAIL}✗ Error cargando tests de BD: {e}{Colors.ENDC}")
+
+    # Cargar tests de processor
+    try:
+        from test_processor import TestTransactionProcessor
+
+        processor_tests = loader.loadTestsFromTestCase(TestTransactionProcessor)
+        test_suite.addTests(processor_tests)
+        print(f"{Colors.OKGREEN}✓{Colors.ENDC} Tests de procesador cargados")
+    except Exception as e:
+        print(f"{Colors.FAIL}✗ Error cargando tests de procesador: {e}{Colors.ENDC}")
+
+    if test_suite.countTestCases() == 0:
+        print(f"{Colors.WARNING}⚠ No se encontraron tests para ejecutar{Colors.ENDC}")
+        return False
+
+    # Ejecutar tests
+    runner = unittest.TextTestRunner(verbosity=2)
+    result = runner.run(test_suite)
+
+    if result.wasSuccessful():
+        print(f"\n{Colors.OKGREEN}✓ Todos los tests unitarios pasaron{Colors.ENDC}")
+        return True
+    else:
+        print(f"\n{Colors.FAIL}✗ Algunos tests unitarios fallaron{Colors.ENDC}")
+        return False
+
+
 def main():
     """Función principal"""
     print(f"\n{Colors.BOLD}{Colors.OKCYAN}")
     print("╔═══════════════════════════════════════════════════════════╗")
-    print("║         TermoWallet - Sistema de Verificación            ║")
+    print("║         TermoWallet - Ejecutor de Tests Completo         ║")
     print("╚═══════════════════════════════════════════════════════════╝")
     print(f"{Colors.ENDC}")
 
     results = []
 
-    # Ejecutar verificaciones
+    # Ejecutar verificaciones en secuencia
     results.append(("Dependencias", check_dependencies()))
     results.append(("Estructura", check_structure()))
     results.append(("Base de Datos", test_database_connection()))
-
-    # Preguntar si ejecutar tests unitarios
-    print(
-        f"\n{Colors.OKCYAN}¿Deseas ejecutar los tests unitarios? (s/n):{Colors.ENDC} ",
-        end="",
-    )
-    response = input().lower()
-
-    if response == "s":
-        results.append(("Tests Unitarios", run_unit_tests()))
+    results.append(("Diagnóstico", run_diagnostic()))
+    results.append(("Tests Unitarios", run_unit_tests()))
 
     # Resumen final
-    print_header("Resumen de Verificación")
+    print_header("RESUMEN FINAL")
 
-    all_passed = True
+    all_passed = all(result for _, result in results)
+
     for name, passed in results:
         status = (
             f"{Colors.OKGREEN}✓ PASS{Colors.ENDC}"
@@ -190,22 +234,23 @@ def main():
             else f"{Colors.FAIL}✗ FAIL{Colors.ENDC}"
         )
         print(f"{name.ljust(20)}: {status}")
-        if not passed:
-            all_passed = False
 
     print()
     if all_passed:
-        print(
-            f"{Colors.OKGREEN}{Colors.BOLD}🎉 ¡Todo está listo! Puedes ejecutar la aplicación con:{Colors.ENDC}"
-        )
-        print(f"{Colors.OKCYAN}   flet run src/main.py{Colors.ENDC}\n")
+        print(f"{Colors.OKGREEN}{Colors.BOLD}🎉 ¡Todos los tests pasaron!{Colors.ENDC}")
+        print(f"{Colors.OKCYAN}La aplicación está lista para ejecutarse.{Colors.ENDC}")
+        print(f"\nEjecutar con: {Colors.BOLD}flet run src/main.py{Colors.ENDC}")
     else:
+        failed_tests = [name for name, passed in results if not passed]
         print(
-            f"{Colors.WARNING}{Colors.BOLD}⚠ Hay problemas que resolver antes de ejecutar{Colors.ENDC}\n"
+            f"{Colors.WARNING}{Colors.BOLD}⚠ Tests fallidos: {', '.join(failed_tests)}{Colors.ENDC}"
         )
+        print(f"{Colors.OKCYAN}Revisa los mensajes de error arriba.{Colors.ENDC}")
 
     return 0 if all_passed else 1
 
 
 if __name__ == "__main__":
+    # Asegurar que estamos en el directorio correcto
+    os.chdir(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     sys.exit(main())

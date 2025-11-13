@@ -106,6 +106,7 @@ class ExpenseTrackerApp:
     def load_home_view(self):
         """Vista principal con resumen mensual"""
         self.current_view = "home"
+        self.page.floating_action_button = None  # Remover FAB si existe
         summary = self.db.get_monthly_summary(self.current_year, self.current_month)
 
         # Tarjetas de resumen
@@ -349,6 +350,7 @@ class ExpenseTrackerApp:
     def load_add_transaction_view(self):
         """Vista para añadir transacciones manualmente"""
         self.current_view = "add"
+        self.page.floating_action_button = None  # Remover FAB si existe
 
         # Tipo de transacción
         self.transaction_type_tabs = ft.Tabs(
@@ -604,6 +606,7 @@ class ExpenseTrackerApp:
     def load_history_view(self):
         """Vista de historial de transacciones"""
         self.current_view = "history"
+        self.page.floating_action_button = None  # Remover FAB si existe
 
         transactions = self.db.get_transactions_by_month(
             self.current_year, self.current_month
@@ -780,6 +783,7 @@ class ExpenseTrackerApp:
     def load_charts_view(self):
         """Vista de gráficos y análisis"""
         self.current_view = "charts"
+        self.page.floating_action_button = None  # Remover FAB si existe
 
         summary = self.db.get_monthly_summary(self.current_year, self.current_month)
         expenses_by_category = self.db.get_expenses_by_category(

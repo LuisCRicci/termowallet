@@ -10,8 +10,8 @@ import os
 import sys
 from src.data.models import Category, Transaction
 
-# Añadir path
-sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+# Agregar el directorio raíz del proyecto al path
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from src.data.database import DatabaseManager
 

@@ -6,14 +6,13 @@ Ejecutar con: flet run src/main.py
 VERSIÓN CON LIMPIEZA DE BASE DE DATOS
 """
 
-import flet as ft
-from datetime import datetime
 import sys
 import os
 
-# Añadir path para imports
-sys.path.append(os.path.dirname(os.path.dirname(__file__)))
-
+# Agregar el directorio raíz del proyecto al path
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+import flet as ft
+from datetime import datetime
 from src.data.database import DatabaseManager
 from src.business.processor import TransactionProcessor
 from src.utils.config import Config
@@ -22,7 +21,20 @@ from src.utils.config import Config
 class ExpenseTrackerApp:
     def __init__(self, page: ft.Page):
         self.page = page
-        self.db = DatabaseManager()
+
+        print("🚀 Inicializando TermoWallet...")
+
+        # self.db = DatabaseManager()
+
+        try:
+            self.db = DatabaseManager(Config.get_db_path())
+            print("✅ Base de datos inicializada")
+        except Exception as e:
+            print(f"❌ Error inicializando BD: {e}")
+            import traceback
+
+            traceback.print_exc()
+
         self.processor = TransactionProcessor()
 
         # Configuración de la página
@@ -105,133 +117,302 @@ class ExpenseTrackerApp:
     # ========== VISTA: HOME ==========
     def load_home_view(self):
         """Vista principal con resumen mensual"""
+        print("\n" + "=" * 60)
+        print("🏠 CARGANDO VISTA HOME")
+        print("=" * 60)
+
         self.current_view = "home"
         self.page.floating_action_button = None  # Remover FAB si existe
+
         summary = self.db.get_monthly_summary(self.current_year, self.current_month)
-
-        # Tarjetas de resumen
-        income_card = self._create_summary_card(
-            "Ingresos",
-            f"{Config.CURRENCY_SYMBOL} {summary['total_income']:.2f}",
-            ft.Icons.TRENDING_UP,
-            "#22c55e",
+        expenses_by_category = self.db.get_expenses_by_category(
+            self.current_year, self.current_month
         )
-
-        expense_card = self._create_summary_card(
-            "Gastos",
-            f"{Config.CURRENCY_SYMBOL} {summary['total_expenses']:.2f}",
-            ft.Icons.TRENDING_DOWN,
-            "#ef4444",
-        )
-
-        savings_card = self._create_summary_card(
-            "Ahorro",
-            f"{Config.CURRENCY_SYMBOL} {summary['savings']:.2f}",
-            ft.Icons.SAVINGS,
-            "#3b82f6" if summary["savings"] >= 0 else "#f97316",
-        )
+        monthly_trend = self.db.get_monthly_trend(6)
 
         # Selector de mes
         month_selector = ft.Row(
             [
                 ft.IconButton(icon=ft.Icons.ARROW_BACK, on_click=self.previous_month),
                 ft.Text(
-                    f"{summary['month_name']} {self.current_year}",
-                    size=20,
+                    f"{datetime(self.current_year, self.current_month, 1).strftime('%B %Y')}",
+                    size=18,
                     weight=ft.FontWeight.BOLD,
                     expand=True,
                     text_align=ft.TextAlign.CENTER,
                 ),
                 ft.IconButton(icon=ft.Icons.ARROW_FORWARD, on_click=self.next_month),
-            ],
-            alignment=ft.MainAxisAlignment.CENTER,
+            ]
         )
 
-        # Indicador de tasa de ahorro
-        savings_rate = summary["savings_rate"]
-        savings_color = "#22c55e" if savings_rate > 20 else "#f97316"
-
-        savings_indicator = ft.Container(
+        # Resumen del mes
+        summary_card = ft.Container(
             content=ft.Column(
                 [
-                    ft.Text("Tasa de Ahorro", size=16, weight=ft.FontWeight.BOLD),
-                    ft.ProgressBar(
-                        value=max(0, min(savings_rate / 100, 1)),
-                        color=savings_color,
-                        bgcolor="#e5e7eb",
-                        height=10,
+                    ft.Text("📊 Resumen del Mes", size=30, weight=ft.FontWeight.BOLD),
+                    ft.Divider(),
+                    ft.Text(
+                        f"💰 Ingresos: {Config.CURRENCY_SYMBOL} {summary['total_income']:.2f}",
+                        size=16,
                     ),
                     ft.Text(
-                        f"{savings_rate:.1f}%",
-                        size=24,
-                        weight=ft.FontWeight.BOLD,
-                        color=savings_color,
+                        f"💸 Gastos: {Config.CURRENCY_SYMBOL} {summary['total_expenses']:.2f}",
+                        size=16,
                     ),
-                ],
-                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                    ft.Text(
+                        f"💎 Ahorro: {Config.CURRENCY_SYMBOL} {summary['savings']:.2f}",
+                        size=16,
+                        weight=ft.FontWeight.BOLD,
+                    ),
+                    ft.Text(
+                        f"📈 Tasa de Ahorro: {summary['savings_rate']:.1f}%", size=16
+                    ),
+                ]
             ),
             padding=20,
-            border_radius=10,
             bgcolor=ft.Colors.WHITE,
+            border_radius=10,
         )
 
-        # Últimas transacciones
-        recent_transactions = self.db.get_transactions_by_month(
-            self.current_year, self.current_month
-        )[:5]
+        charts = [summary_card]
 
-        if recent_transactions:
-            transactions_list = ft.Column(
-                [
-                    ft.Text(
-                        "Transacciones Recientes", size=18, weight=ft.FontWeight.BOLD
-                    ),
-                    *[self._create_transaction_tile(t) for t in recent_transactions],
-                ],
-                spacing=5,
-            )
-        else:
-            transactions_list = ft.Container(
-                content=ft.Column(
-                    [
-                        ft.Icon(
-                            ft.Icons.RECEIPT_LONG_OUTLINED,
-                            size=64,
-                            color=ft.Colors.GREY_400,
-                        ),
-                        ft.Text(
-                            "No hay transacciones este mes",
-                            size=16,
-                            color=ft.Colors.GREY_600,
-                            text_align=ft.TextAlign.CENTER,
-                        ),
-                    ],
-                    horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                    spacing=10,
-                ),
-                padding=40,
-                bgcolor=ft.Colors.WHITE,
-                border_radius=10,
-            )
+        # Gráfico de gastos por categoría
+        if expenses_by_category:
+            category_chart = self._create_category_chart(expenses_by_category)
+            charts.append(category_chart)
 
-        # Actualizar contenedor principal
+        # Tendencia mensual
+        if monthly_trend:
+            trend_chart = self._create_trend_chart(monthly_trend)
+            charts.append(trend_chart)
+
         self.main_container.content = ft.Column(
-            [
-                month_selector,
-                ft.Container(height=10),
-                ft.Row(
-                    [income_card, expense_card, savings_card], wrap=True, spacing=10
-                ),
-                ft.Container(height=10),
-                savings_indicator,
-                ft.Divider(height=20),
-                transactions_list,
-            ],
+            [month_selector, ft.Container(height=10), *charts],
             scroll=ft.ScrollMode.AUTO,
             expand=True,
+            spacing=15,
         )
 
         self.page.update()
+
+        """ solucion tem,poral
+        try:
+            print(
+                f"📊 Obteniendo resumen para {self.current_month}/{self.current_year}"
+            )
+            summary = self.db.get_monthly_summary(self.current_year, self.current_month)
+
+            print(f"✅ Summary obtenido: {summary}")
+            # Validar que summary no sea None
+            if summary is None:
+                summary = {
+                    "total_income": 0.0,
+                    "total_expenses": 0.0,
+                    "savings": 0.0,
+                    "savings_rate": 0.0,
+                    "month_name": datetime(
+                        self.current_year, self.current_month, 1
+                    ).strftime("%B"),
+                    "transaction_count": 0,
+                }
+
+            print(f"💰 Ingresos: {summary.get('total_income', 0)}")
+            print(f"💸 Gastos: {summary.get('total_expenses', 0)}")
+            print(f"💎 Ahorro: {summary.get('savings', 0)}")
+
+            # Tarjetas de resumen
+            income_card = self._create_summary_card(
+                "Ingresos",
+                f"{Config.CURRENCY_SYMBOL} {summary.get('total_income', 0.0):.2f}",
+                ft.Icons.TRENDING_UP,
+                "#22c55e",
+            )
+
+            expense_card = self._create_summary_card(
+                "Gastos",
+                f"{Config.CURRENCY_SYMBOL} {summary.get('total_expenses', 0.0):.2f}",
+                ft.Icons.TRENDING_DOWN,
+                "#ef4444",
+            )
+
+            savings_card = self._create_summary_card(
+                "Ahorro",
+                f"{Config.CURRENCY_SYMBOL} {summary.get('savings', 0.0):.2f}",
+                ft.Icons.SAVINGS,
+                "#3b82f6" if summary.get("savings", 0.0) >= 0 else "#f97316",
+            )
+
+            # Selector de mes
+            month_selector = ft.Row(
+                [
+                    ft.IconButton(
+                        icon=ft.Icons.ARROW_BACK, on_click=self.previous_month
+                    ),
+                    ft.Text(
+                        f"{datetime(self.current_year, self.current_month, 1).strftime('%B %Y')}",
+                        size=18,
+                        weight=ft.FontWeight.BOLD,
+                        expand=True,
+                        text_align=ft.TextAlign.CENTER,
+                    ),
+                    ft.IconButton(
+                        icon=ft.Icons.ARROW_FORWARD, on_click=self.next_month
+                    ),
+                ]
+            )
+
+            # Indicador de tasa de ahorro
+            savings_rate = summary.get("savings_rate", 0.0)
+            savings_color = "#22c55e" if savings_rate > 20 else "#f97316"
+
+            savings_indicator = ft.Container(
+                content=ft.Column(
+                    [
+                        ft.Text("Tasa de Ahorro", size=16, weight=ft.FontWeight.BOLD),
+                        ft.ProgressBar(
+                            value=max(0, min(savings_rate / 100, 1)),
+                            color=savings_color,
+                            bgcolor="#e5e7eb",
+                            height=10,
+                        ),
+                        ft.Text(
+                            f"{savings_rate:.1f}%",
+                            size=24,
+                            weight=ft.FontWeight.BOLD,
+                            color=savings_color,
+                        ),
+                    ],
+                    horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                ),
+                padding=20,
+                border_radius=10,
+                bgcolor=ft.Colors.WHITE,
+            )
+
+            
+            print("📋 Obteniendo transacciones recientes...")
+            
+            # Últimas transacciones - CON MEJOR MANEJO DE ERRORES
+            try:
+                recent_transactions = self.db.get_transactions_by_month(
+                    self.current_year, self.current_month
+                )[:5]
+
+                print(f"✅ {len(recent_transactions)} transacciones encontradas")
+
+            except Exception as e:
+                print(f"Error obteniendo transacciones: {e}")
+                recent_transactions = []
+
+            if recent_transactions:
+                print("📝 Creando lista de transacciones...")
+                transaction_tiles = []
+                for i, t in enumerate(recent_transactions):
+                    if t is not None:
+                        try:
+                            tile = self._create_transaction_tile(t)
+                            transaction_tiles.append(tile)
+                            print(f"  ✓ Tile {i+1} creado")
+                        except Exception as e:
+                            print(f"  ✗ Error en tile {i+1}: {e}")
+
+                transactions_list = ft.Column(
+                    [
+                        ft.Text(
+                            "Transacciones Recientes",
+                            size=18,
+                            weight=ft.FontWeight.BOLD,
+                        ),
+                        *transaction_tiles,
+                    ],
+                    spacing=5,
+                )
+            else:
+                print("📭 No hay transacciones, mostrando mensaje vacío")
+                transactions_list = ft.Container(
+                    content=ft.Column(
+                        [
+                            ft.Icon(
+                                ft.Icons.RECEIPT_LONG_OUTLINED,
+                                size=64,
+                                color=ft.Colors.GREY_400,
+                            ),
+                            ft.Text(
+                                "No hay transacciones este mes",
+                                size=16,
+                                color=ft.Colors.GREY_600,
+                                text_align=ft.TextAlign.CENTER,
+                            ),
+                        ],
+                        horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                        spacing=10,
+                    ),
+                    padding=40,
+                    bgcolor=ft.Colors.WHITE,
+                    border_radius=10,
+                )
+
+            # Actualizar contenedor principal
+            print("🎨 Actualizando contenedor principal...")
+            self.main_container.content = ft.Column(
+                [
+                    month_selector,
+                    ft.Container(height=10),
+                    ft.Row(
+                        [income_card, expense_card, savings_card], wrap=True, spacing=10
+                    ),
+                    ft.Container(height=10),
+                    savings_indicator,
+                    ft.Divider(height=20),
+                    transactions_list,
+                ],
+                scroll=ft.ScrollMode.AUTO,
+                expand=True,
+            )
+
+            print("🔄 Actualizando página...")
+            self.page.update()
+            print("✅ Vista Home cargada exitosamente")
+            print("=" * 60 + "\n")
+
+        except Exception as e:
+            print(f"\n❌ ERROR CRÍTICO EN LOAD_HOME_VIEW:")
+            print(f"   Tipo: {type(e).__name__}")
+            print(f"   Mensaje: {str(e)}")
+            import traceback
+
+            print("\n📍 TRACEBACK COMPLETO:")
+            traceback.print_exc()
+            print("=" * 60 + "\n")
+
+            # Mostrar mensaje de error al usuario
+            self.main_container.content = ft.Column(
+                [
+                    ft.Icon(ft.Icons.ERROR_OUTLINE, size=64, color=ft.Colors.RED),
+                    ft.Text(
+                        "Error al cargar la vista",
+                        size=18,
+                        weight=ft.FontWeight.BOLD,
+                        color=ft.Colors.RED,
+                    ),
+                    ft.Text(
+                        str(e),
+                        size=14,
+                        color=ft.Colors.GREY_700,
+                    ),
+                    # PARA VER DETALLES EN CONSOLA
+                    ft.ElevatedButton(
+                        "Ver detalles en consola",
+                        on_click=lambda _: print(traceback.format_exc()),
+                    ),
+                ],
+                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                alignment=ft.MainAxisAlignment.CENTER,
+                expand=True,
+            )
+            self.page.update()
+        
+        """
 
     def _create_summary_card(self, title: str, value: str, icon, color: str):
         """Crea una tarjeta de resumen"""
@@ -239,7 +420,7 @@ class ExpenseTrackerApp:
             content=ft.Column(
                 [
                     ft.Icon(icon, size=40, color=color),
-                    ft.Text(title, size=14, color=ft.Colors.GREY_700),
+                    ft.Text(title, size=14, color=ft.Colors.WHITE),
                     ft.Text(value, size=18, weight=ft.FontWeight.BOLD),
                 ],
                 horizontal_alignment=ft.CrossAxisAlignment.CENTER,
@@ -247,86 +428,101 @@ class ExpenseTrackerApp:
             ),
             padding=15,
             border_radius=10,
-            bgcolor=ft.Colors.WHITE,
+            bgcolor=ft.Colors.INDIGO_300,
             expand=True,
             height=130,
         )
 
     def _create_transaction_tile(self, transaction):
-        """Crea un tile para una transacción"""
-        category = self.db.get_category_by_id(transaction.category_id)
-
-        if category is None:
-            category_name = "Sin categoría"
-            category_icon = "❓"
-            category_color = "#9e9e9e"
-        else:
-            category_name = str(category.name) if category.name else "Sin categoría"
-            category_icon = str(category.icon) if category.icon else "💰"
-            category_color = str(category.color) if category.color else "#3b82f6"
-
-        transaction_type = (
-            str(transaction.transaction_type)
-            if transaction.transaction_type
-            else "expense"
-        )
-        is_income = transaction_type == "income"
-
-        description = (
-            str(transaction.description)
-            if transaction.description
-            else "Sin descripción"
-        )
-        amount = float(transaction.amount) if transaction.amount else 0.0
-
+        """Crea un tile para una transacción - MEJORADO CON MANEJO DE NONE"""
         try:
-            date_str = transaction.date.strftime(Config.DATE_FORMAT)
-        except:
-            date_str = "Fecha inválida"
+            # Validar que transaction no sea None
+            if transaction is None:
+                print("  ⚠️  Transaction es None")
+                return ft.Container()
 
-        return ft.Container(
-            content=ft.Row(
-                [
-                    ft.Container(
-                        content=ft.Text(category_icon, size=24),
-                        width=50,
-                        height=50,
-                        border_radius=25,
-                        bgcolor=f"{category_color}30",
-                        alignment=ft.alignment.center,
-                    ),
-                    ft.Column(
-                        [
-                            ft.Text(
-                                description,
-                                weight=ft.FontWeight.BOLD,
-                                size=14,
-                                max_lines=1,
-                                overflow=ft.TextOverflow.ELLIPSIS,
-                            ),
-                            ft.Text(
-                                f"{category_name} • {date_str}",
-                                size=12,
-                                color=ft.Colors.GREY_700,
-                            ),
-                        ],
-                        expand=True,
-                        spacing=2,
-                    ),
-                    ft.Text(
-                        f"{'+ ' if is_income else '- '}{Config.CURRENCY_SYMBOL} {amount:.2f}",
-                        size=16,
-                        weight=ft.FontWeight.BOLD,
-                        color="#22c55e" if is_income else "#ef4444",
-                    ),
-                ],
-                alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
-            ),
-            padding=10,
-            border_radius=10,
-            bgcolor=ft.Colors.WHITE,
-            margin=ft.margin.only(bottom=5),
-        )
+            print(f"  📌 Procesando transacción ID: {transaction.id}")
+
+            category = self.db.get_category_by_id(transaction.category_id)
+
+            # Valores por defecto seguros
+            if category is None:
+                print(f"  ⚠️  Categoría {transaction.category_id} no encontrada")
+                category_name = "Sin categoría"
+                category_icon = "❓"
+                category_color = "#9e9e9e"
+            else:
+                category_name = str(category.name) if category.name else "Sin categoría"
+                category_icon = str(category.icon) if category.icon else "💰"
+                category_color = str(category.color) if category.color else "#3b82f6"
+
+            transaction_type = (
+                str(transaction.transaction_type)
+                if transaction.transaction_type
+                else "expense"
+            )
+            is_income = transaction_type == "income"
+            description = (
+                str(transaction.description)
+                if transaction.description
+                else "Sin descripción"
+            )
+            amount = float(transaction.amount) if transaction.amount else 0.0
+
+            try:
+                date_str = transaction.date.strftime(Config.DATE_FORMAT)
+            except:
+                date_str = "Fecha inválida"
+
+            return ft.Container(
+                content=ft.Row(
+                    [
+                        ft.Container(
+                            content=ft.Text(category_icon, size=24),
+                            width=50,
+                            height=50,
+                            border_radius=25,
+                            bgcolor=f"{category_color}30",
+                            alignment=ft.alignment.center,
+                        ),
+                        ft.Column(
+                            [
+                                ft.Text(
+                                    description,
+                                    weight=ft.FontWeight.BOLD,
+                                    size=14,
+                                    max_lines=1,
+                                    overflow=ft.TextOverflow.ELLIPSIS,
+                                ),
+                                ft.Text(
+                                    f"{category_name} • {date_str}",
+                                    size=12,
+                                    color=ft.Colors.GREY_700,
+                                ),
+                            ],
+                            expand=True,
+                            spacing=2,
+                        ),
+                        ft.Text(
+                            f"{'+ ' if is_income else '- '}{Config.CURRENCY_SYMBOL} {amount:.2f}",
+                            size=16,
+                            weight=ft.FontWeight.BOLD,
+                            color="#22c55e" if is_income else "#ef4444",
+                        ),
+                    ],
+                    alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                ),
+                padding=10,
+                border_radius=10,
+                bgcolor=ft.Colors.WHITE,
+                margin=ft.margin.only(bottom=5),
+            )
+        except Exception as e:
+            print(f"  ❌ Error creando tile: {e}")
+            import traceback
+
+            traceback.print_exc()
+            return ft.Container()
 
     def previous_month(self, e):
         """Navega al mes anterior"""
@@ -1715,6 +1911,7 @@ class ExpenseTrackerApp:
     # ========== UTILIDADES ==========
     def refresh_current_view(self):
         """Refresca la vista actual"""
+        print(f"🔄 Refrescando vista: {self.current_view}")
         if self.current_view == "home":
             self.load_home_view()
         elif self.current_view == "add":
@@ -1751,14 +1948,25 @@ class ExpenseTrackerApp:
 
 def main(page: ft.Page):
     """Función principal"""
+    print("\n" + "=" * 60)
+    print("💰 TERMOWALLET - Iniciando aplicación")
+    print("=" * 60 + "\n")
     # Configuración inicial
-    page.window.width = 400
-    page.window.height = 700
+    page.window.width = 600
+    page.window.height = 900
     page.theme_mode = ft.ThemeMode.LIGHT
     page.bgcolor = "#f5f5f5"
 
     # Inicializar app
-    app = ExpenseTrackerApp(page)
+    try:
+        app = ExpenseTrackerApp(page)
+        print("\n✅ Aplicación inicializada correctamente\n")
+    except Exception as e:
+        print(f"\n❌ ERROR FATAL al inicializar:")
+        print(f"   {str(e)}\n")
+        import traceback
+
+        traceback.print_exc()
 
 
 if __name__ == "__main__":

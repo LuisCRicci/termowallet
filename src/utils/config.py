@@ -16,6 +16,7 @@ class Config:
     APP_ORG = "com.termowallet.app"
 
     # Base de datos
+    
     BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
     DATA_DIR = os.path.join(BASE_DIR, "data")
     DB_NAME = "termowallet.db"

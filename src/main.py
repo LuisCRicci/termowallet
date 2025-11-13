@@ -216,9 +216,10 @@ class ExpenseTrackerApp:
             }
             recent_transactions = []
 
-        month_label = get_month_name(self.current_month)
+        
 
         # ===== SELECTOR DE MES =====
+        month_label = get_month_name(self.current_month)
         month_selector = ft.Row(
             [
                 ft.IconButton(
@@ -527,8 +528,6 @@ class ExpenseTrackerApp:
         self.page.update()
 
         print("✅ Página actualizada\n")
-
-    # ===== MÉTODOS AUXILIARES PARA WIDGETS =====
 
     # ===== MÉTODOS AUXILIARES PARA WIDGETS - VERSIÓN CORREGIDA =====
 

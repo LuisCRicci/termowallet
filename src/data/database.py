@@ -19,7 +19,7 @@ from src.utils.config import Config
 class DatabaseManager:
     """Gestor principal de la base de datos"""
 
-    def __init__(self, db_path: str = "termowallet.db"):
+    def __init__(self, db_path: Optional[str] = None):
         """Inicializa la conexión a la base de datos"""
         self.db_path = db_path or Config.get_db_path()
         self.engine = create_engine(f"sqlite:///{db_path}", echo=False)

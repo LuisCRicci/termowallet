@@ -8,7 +8,10 @@ from sqlalchemy.orm import sessionmaker
 from datetime import datetime
 from typing import List, Optional, Dict
 import os
+import sys
 
+# Agregar el directorio raíz del proyecto al path
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from src.data.models import Base, Category, Transaction, MonthlyBudget
 
 
@@ -33,12 +36,7 @@ class DatabaseManager:
             default_categories = [
                 # Categorías de Gastos
                 Category(
-                    name="Alimentación",
-                    icon="🍔",
-                    color="#ef4444",
-                    category_type="expense",
-                    is_default=True,
-                    description="Comida, restaurantes, supermercado",
+                    name="Alimentación", icon="🍔", color="#ef4444", category_type="expense", is_default=True, description="Comida, restaurantes, supermercado",
                 ),
                 Category(
                     name="Transporte",
@@ -49,93 +47,38 @@ class DatabaseManager:
                     description="Uber, gasolina, taxi, bus",
                 ),
                 Category(
-                    name="Entretenimiento",
-                    icon="🎮",
-                    color="#a855f7",
-                    category_type="expense",
-                    is_default=True,
-                    description="Cine, streaming, juegos",
+                    name="Entretenimiento", icon="🎮", color="#a855f7", category_type="expense", is_default=True, description="Cine, streaming, juegos",
                 ),
                 Category(
-                    name="Servicios",
-                    icon="💡",
-                    color="#eab308",
-                    category_type="expense",
-                    is_default=True,
-                    description="Luz, agua, internet, teléfono",
+                    name="Servicios", icon="💡", color="#eab308", category_type="expense", is_default=True, description="Luz, agua, internet, teléfono",
                 ),
                 Category(
-                    name="Salud",
-                    icon="⚕️",
-                    color="#22c55e",
-                    category_type="expense",
-                    is_default=True,
-                    description="Farmacia, doctor, clínica",
+                    name="Salud", icon="⚕️", color="#22c55e", category_type="expense", is_default=True, description="Farmacia, doctor, clínica",
                 ),
                 Category(
-                    name="Educación",
-                    icon="📚",
-                    color="#3b82f6",
-                    category_type="expense",
-                    is_default=True,
-                    description="Cursos, libros, universidad",
+                    name="Educación", icon="📚", color="#3b82f6", category_type="expense", is_default=True, description="Cursos, libros, universidad",
                 ),
                 Category(
-                    name="Vivienda",
-                    icon="🏠",
-                    color="#84cc16",
-                    category_type="expense",
-                    is_default=True,
-                    description="Alquiler, reparaciones, mantenimiento",
+                    name="Vivienda",icon="🏠", color="#84cc16",category_type="expense", is_default=True, description="Alquiler, reparaciones, mantenimiento",
                 ),
                 Category(
-                    name="Compras",
-                    icon="🛍️",
-                    color="#ec4899",
-                    category_type="expense",
-                    is_default=True,
-                    description="Ropa, zapatos, accesorios",
+                    name="Compras", icon="🛍️", color="#ec4899", category_type="expense", is_default=True, description="Ropa, zapatos, accesorios",
                 ),
                 Category(
-                    name="Otros Gastos",
-                    icon="💸",
-                    color="#6b7280",
-                    category_type="expense",
-                    is_default=True,
-                    description="Gastos varios",
+                    name="Otros Gastos", icon="💸", color="#6b7280", category_type="expense", is_default=True, description="Gastos varios",
                 ),
                 # Categorías de Ingresos
                 Category(
-                    name="Salario",
-                    icon="💰",
-                    color="#10b981",
-                    category_type="income",
-                    is_default=True,
-                    description="Sueldo mensual",
+                    name="Salario", icon="💰", color="#10b981", category_type="income", is_default=True, description="Sueldo mensual",
                 ),
                 Category(
-                    name="Freelance",
-                    icon="💼",
-                    color="#06b6d4",
-                    category_type="income",
-                    is_default=True,
-                    description="Trabajos independientes",
+                    name="Freelance", icon="💼", color="#06b6d4",category_type="income", is_default=True, description="Trabajos independientes",
                 ),
                 Category(
-                    name="Inversiones",
-                    icon="📈",
-                    color="#8b5cf6",
-                    category_type="income",
-                    is_default=True,
-                    description="Dividendos, intereses",
+                    name="Inversiones", icon="📈",color="#8b5cf6",category_type="income", is_default=True, description="Dividendos, intereses",
                 ),
                 Category(
-                    name="Otros Ingresos",
-                    icon="💵",
-                    color="#14b8a6",
-                    category_type="income",
-                    is_default=True,
-                    description="Ingresos varios",
+                    name="Otros Ingresos", icon="💵", color="#14b8a6", category_type="income",is_default=True,description="Ingresos varios",
                 ),
             ]
 

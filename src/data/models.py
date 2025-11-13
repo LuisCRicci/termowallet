@@ -3,6 +3,11 @@ Modelos de Base de Datos usando SQLAlchemy 2.0 - con tipado estático
 Archivo: src/data/models.py
 """
 
+import os
+import sys
+
+# Agregar el directorio raíz del proyecto al path
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from datetime import datetime
 from typing import List, Optional
 from sqlalchemy import (

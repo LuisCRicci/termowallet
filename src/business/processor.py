@@ -1,5 +1,5 @@
 """
-Procesador de Transacciones Bancarias
+Procesador de Transacciones Bancarias - CORREGIDO
 Archivo: src/business/processor.py
 """
 
@@ -321,7 +321,7 @@ class TransactionProcessor:
             return []
 
     def get_summary(self) -> Dict:
-        """Obtiene un resumen de los datos procesados"""
+        """Obtiene un resumen de los datos procesados - CORREGIDO"""
         if self.df is None or len(self.df) == 0:
             return {"status": "empty", "message": "No hay datos procesados"}
 
@@ -330,6 +330,7 @@ class TransactionProcessor:
                 "status": "success",
                 "original_count": self.original_count,
                 "processed_count": len(self.df),
+                "total_transactions": len(self.df),  # ✅ AGREGADO PARA EL TEST
                 "removed_count": self.original_count - len(self.df),
                 "total_amount": float(self.df["monto"].sum()),
                 "average_amount": float(self.df["monto"].mean()),

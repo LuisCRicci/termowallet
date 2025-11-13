@@ -7,8 +7,6 @@ import sys
 import os
 import unittest
 
-# Agregar el directorio raíz del proyecto al path
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from datetime import datetime
 
@@ -127,4 +125,5 @@ if __name__ == "__main__":
     except Exception as e:
         print(f"❌ Error durante el diagnóstico: {e}")
         import traceback
+
         traceback.print_exc()

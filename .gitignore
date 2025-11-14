@@ -6,3 +6,6 @@ src/business/__pycache__/
 src/data/__pycache__/
 src/ui/__pycache__/
 src/utils/__pycache__/
+.devdbrc
+src/storage/
+None

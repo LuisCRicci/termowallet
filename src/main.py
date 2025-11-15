@@ -185,8 +185,6 @@ class ExpenseTrackerApp:
                 self.db,
                 self.show_snackbar
             )
-            # ⭐ AGREGAR CALLBACK DE REFRESCO
-            view.set_refresh_callback(lambda: self.refresh_current_view())
         # ⭐ AGREGAR ESTE BLOQUE
         elif view_name == "budget":
             view = BudgetView(
@@ -197,8 +195,6 @@ class ExpenseTrackerApp:
                 self.current_year,
                 self.handle_month_change
             )
-            # ⭐ AGREGAR CALLBACK DE REFRESCO
-            view.set_refresh_callback(lambda: self.refresh_current_view())
         # ⭐ FIN DEL BLOQUE
         elif view_name == "settings":
             view = SettingsView(

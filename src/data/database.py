@@ -748,6 +748,254 @@ class DatabaseManager:
             "expenses": expense_count,
             "income": income_count,
         }
+        
+    # ========== AGREGAR ESTOS MÉTODOS A DatabaseManager EN database.py ==========
+    # Agregar después de los métodos existentes, antes del método close()
+
+    def get_monthly_budget(self, year: int, month: int) -> Optional[MonthlyBudget]:
+        """Obtiene el presupuesto de un mes específico"""
+        return (
+            self.session.query(MonthlyBudget)
+            .filter(MonthlyBudget.year == year, MonthlyBudget.month == month)
+            .first()
+        )
+
+
+    def get_all_budgets(self) -> List[MonthlyBudget]:
+        """Obtiene todos los presupuestos ordenados por fecha descendente"""
+        return (
+            self.session.query(MonthlyBudget)
+            .order_by(MonthlyBudget.year.desc(), MonthlyBudget.month.desc())
+            .all()
+        )
+
+
+    def create_or_update_budget(
+        self,
+        year: int,
+        month: int,
+        income_goal: float = 0.0,
+        expense_limit: float = 0.0,
+        savings_goal: float = 0.0,
+        notes: Optional[str] = None,
+    ) -> MonthlyBudget:
+        """Crea o actualiza el presupuesto de un mes"""
+        budget = self.get_monthly_budget(year, month)
+
+        if budget:
+            # Actualizar existente
+            budget.income_goal = income_goal
+            budget.expense_limit = expense_limit
+            budget.savings_goal = savings_goal
+            budget.notes = notes
+            budget.updated_at = datetime.now()
+        else:
+            # Crear nuevo
+            budget = MonthlyBudget(
+                year=year,
+                month=month,
+                income_goal=income_goal,
+                expense_limit=expense_limit,
+                savings_goal=savings_goal,
+                notes=notes,
+            )
+            self.session.add(budget)
+
+        self.session.commit()
+        return budget
+
+
+    def delete_budget(self, year: int, month: int) -> bool:
+        """Elimina un presupuesto mensual"""
+        budget = self.get_monthly_budget(year, month)
+        if budget:
+            self.session.delete(budget)
+            self.session.commit()
+            return True
+        return False
+
+
+    def get_budget_status(self, year: int, month: int) -> Dict:
+        """
+        Obtiene el estado actual del presupuesto comparado con lo real.
+        
+        Returns:
+            Dict con comparación entre presupuesto y realidad:
+            - budget_exists (bool)
+            - income_goal, expense_limit, savings_goal (float)
+            - actual_income, actual_expenses, actual_savings (float)
+            - income_progress, expense_progress, savings_progress (float) %
+            - is_under_budget (bool)
+            - days_left (int)
+        """
+        from calendar import monthrange
+
+        budget = self.get_monthly_budget(year, month)
+        summary = self.get_monthly_summary(year, month)
+
+        # Calcular días restantes
+        now = datetime.now()
+        if year == now.year and month == now.month:
+            days_in_month = monthrange(year, month)[1]
+            days_left = days_in_month - now.day
+        else:
+            days_left = 0
+
+        if not budget:
+            return {
+                "budget_exists": False,
+                "income_goal": 0.0,
+                "expense_limit": 0.0,
+                "savings_goal": 0.0,
+                "actual_income": summary["total_income"],
+                "actual_expenses": summary["total_expenses"],
+                "actual_savings": summary["savings"],
+                "income_progress": 0.0,
+                "expense_progress": 0.0,
+                "savings_progress": 0.0,
+                "is_under_budget": True,
+                "days_left": days_left,
+                "notes": None,
+            }
+
+        # Calcular progreso
+        income_progress = (
+            (summary["total_income"] / budget.income_goal * 100)
+            if budget.income_goal > 0
+            else 0
+        )
+
+        expense_progress = (
+            (summary["total_expenses"] / budget.expense_limit * 100)
+            if budget.expense_limit > 0
+            else 0
+        )
+
+        savings_progress = (
+            (summary["savings"] / budget.savings_goal * 100)
+            if budget.savings_goal > 0
+            else 0
+        )
+
+        is_under_budget = (
+            summary["total_expenses"] <= budget.expense_limit
+            if budget.expense_limit > 0
+            else True
+        )
+
+        return {
+            "budget_exists": True,
+            "income_goal": budget.income_goal,
+            "expense_limit": budget.expense_limit,
+            "savings_goal": budget.savings_goal,
+            "actual_income": summary["total_income"],
+            "actual_expenses": summary["total_expenses"],
+            "actual_savings": summary["savings"],
+            "income_progress": income_progress,
+            "expense_progress": expense_progress,
+            "savings_progress": savings_progress,
+            "is_under_budget": is_under_budget,
+            "days_left": days_left,
+            "notes": budget.notes,
+            "expense_remaining": budget.expense_limit - summary["total_expenses"],
+            "savings_remaining": budget.savings_goal - summary["savings"],
+        }
+
+
+    def get_budget_alerts(self, year: int, month: int) -> List[Dict]:
+        """
+        Genera alertas sobre el estado del presupuesto.
+        
+        Returns:
+            Lista de diccionarios con alertas:
+            - type (str): "warning", "danger", "success"
+            - message (str): Mensaje de la alerta
+            - icon (str): Ícono sugerido
+        """
+        status = self.get_budget_status(year, month)
+        alerts = []
+
+        if not status["budget_exists"]:
+            alerts.append({
+                "type": "info",
+                "message": "No has configurado un presupuesto para este mes",
+                "icon": "💡",
+            })
+            return alerts
+
+        # Alerta de gastos
+        if status["expense_progress"] >= 100:
+            alerts.append({
+                "type": "danger",
+                "message": f"¡Has excedido tu límite de gastos en {status['expense_progress'] - 100:.1f}%!",
+                "icon": "🚨",
+            })
+        elif status["expense_progress"] >= 90:
+            alerts.append({
+                "type": "warning",
+                "message": f"Estás al {status['expense_progress']:.1f}% de tu límite de gastos",
+                "icon": "⚠️",
+            })
+        elif status["expense_progress"] >= 75:
+            alerts.append({
+                "type": "warning",
+                "message": f"Has usado el {status['expense_progress']:.1f}% de tu presupuesto",
+                "icon": "📊",
+            })
+
+        # Alerta de ahorros
+        if status["savings_goal"] > 0:
+            if status["savings_progress"] >= 100:
+                alerts.append({
+                    "type": "success",
+                    "message": f"¡Felicidades! Alcanzaste tu meta de ahorro",
+                    "icon": "🎉",
+                })
+            elif status["savings_progress"] >= 75:
+                alerts.append({
+                    "type": "success",
+                    "message": f"Llevas {status['savings_progress']:.1f}% de tu meta de ahorro",
+                    "icon": "💰",
+                })
+            elif status["savings_progress"] < 30 and status["days_left"] < 10:
+                alerts.append({
+                    "type": "warning",
+                    "message": f"Solo llevas {status['savings_progress']:.1f}% de tu meta de ahorro y quedan {status['days_left']} días",
+                    "icon": "⏰",
+                })
+
+        # Alerta de ingresos
+        if status["income_goal"] > 0 and status["income_progress"] < 50 and status["days_left"] < 15:
+            alerts.append({
+                "type": "info",
+                "message": f"Llevas {status['income_progress']:.1f}% de tu meta de ingresos",
+                "icon": "📈",
+            })
+
+        return alerts
+
+
+    def get_budget_history(self, months: int = 6) -> List[Dict]:
+        """Obtiene el historial de presupuestos y su cumplimiento"""
+        results = []
+        current_date = datetime.now()
+
+        for i in range(months):
+            year = current_date.year
+            month = current_date.month - i
+
+            if month <= 0:
+                month += 12
+                year -= 1
+
+            status = self.get_budget_status(year, month)
+            status["year"] = year
+            status["month"] = month
+            status["month_name"] = datetime(year, month, 1).strftime("%B %Y")
+
+            results.append(status)
+
+        return results
 
     def close(self):
         """Cierra la conexión a la base de datos"""

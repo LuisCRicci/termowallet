@@ -540,3 +540,401 @@ class CategoryIcon(ft.Container):
             bgcolor=f"{color}30",
             alignment=ft.alignment.center,
         )
+        
+# ========== AGREGAR ESTOS WIDGETS AL FINAL DE widgets.py ==========
+
+class BudgetProgressCard(ft.Container):
+    """
+    Tarjeta que muestra el progreso de un aspecto del presupuesto.
+    
+    Args:
+        title (str): Título (ej: "Gastos", "Ahorros")
+        goal (float): Meta establecida
+        current (float): Valor actual
+        icon: Ícono de Flet
+        color (str): Color del tema
+        is_reversed (bool): Si True, más es mejor (ej: ingresos)
+    """
+
+    def __init__(
+        self,
+        title: str,
+        goal: float,
+        current: float,
+        icon,
+        color: str,
+        is_reversed: bool = False
+    ):
+        progress = (current / goal * 100) if goal > 0 else 0
+        remaining = goal - current
+
+        # Determinar estado
+        if is_reversed:
+            # Para ingresos/ahorros: más es mejor
+            if progress >= 100:
+                status_color = "#22c55e"
+                status_icon = ft.Icons.CHECK_CIRCLE
+                status_text = "¡Meta alcanzada!"
+            elif progress >= 75:
+                status_color = "#3b82f6"
+                status_icon = ft.Icons.TRENDING_UP
+                status_text = f"{progress:.1f}% completado"
+            else:
+                status_color = "#f59e0b"
+                status_icon = ft.Icons.SCHEDULE
+                status_text = f"{progress:.1f}% completado"
+        else:
+            # Para gastos: menos es mejor
+            if progress >= 100:
+                status_color = "#ef4444"
+                status_icon = ft.Icons.WARNING
+                status_text = f"¡{progress - 100:.1f}% excedido!"
+            elif progress >= 90:
+                status_color = "#f59e0b"
+                status_icon = ft.Icons.ERROR_OUTLINE
+                status_text = f"{progress:.1f}% usado"
+            else:
+                status_color = "#22c55e"
+                status_icon = ft.Icons.CHECK_CIRCLE_OUTLINE
+                status_text = f"{progress:.1f}% usado"
+
+        content = ft.Column(
+            [
+                # Encabezado
+                ft.Row(
+                    [
+                        ft.Icon(icon, size=28, color=color),
+                        ft.Column(
+                            [
+                                ft.Text(title, size=14, color=ft.Colors.GREY_600),
+                                ft.Text(
+                                    f"{Config.CURRENCY_SYMBOL} {current:.2f}",
+                                    size=24,
+                                    weight=ft.FontWeight.BOLD,
+                                    color=color,
+                                ),
+                            ],
+                            spacing=2,
+                            expand=True,
+                        ),
+                    ],
+                    spacing=10,
+                ),
+                # Barra de progreso
+                ft.Column(
+                    [
+                        ft.ProgressBar(
+                            value=min(progress / 100, 1.0),
+                            color=status_color,
+                            bgcolor=ft.Colors.GREY_200,
+                            height=8,
+                        ),
+                        ft.Row(
+                            [
+                                ft.Row(
+                                    [
+                                        ft.Icon(
+                                            status_icon, 
+                                            size=16, 
+                                            color=status_color
+                                        ),
+                                        ft.Text(
+                                            status_text,
+                                            size=12,
+                                            color=status_color,
+                                            weight=ft.FontWeight.BOLD,
+                                        ),
+                                    ],
+                                    spacing=5,
+                                ),
+                                ft.Text(
+                                    f"Meta: {Config.CURRENCY_SYMBOL} {goal:.2f}",
+                                    size=11,
+                                    color=ft.Colors.GREY_600,
+                                ),
+                            ],
+                            alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                        ),
+                    ],
+                    spacing=5,
+                ),
+                # Restante
+                ft.Container(
+                    content=ft.Text(
+                        f"{'Faltan' if remaining > 0 else 'Excedido en'} {Config.CURRENCY_SYMBOL} {abs(remaining):.2f}",
+                        size=12,
+                        color=ft.Colors.GREY_700,
+                        text_align=ft.TextAlign.CENTER,
+                    ),
+                    padding=8,
+                    bgcolor=ft.Colors.GREY_100,
+                    border_radius=8,
+                ),
+            ],
+            spacing=12,
+        )
+
+        super().__init__(
+            content=content,
+            padding=20,
+            bgcolor=ft.Colors.WHITE,
+            border_radius=12,
+            border=ft.border.all(1, ft.Colors.GREY_200),
+        )
+
+
+class BudgetAlertBanner(ft.Container):
+    """
+    Banner de alerta para el presupuesto.
+    
+    Args:
+        alert (Dict): Diccionario con:
+            - type (str): "warning", "danger", "success", "info"
+            - message (str): Mensaje
+            - icon (str): Emoji
+    """
+
+    def __init__(self, alert: Dict):
+        alert_type = alert.get("type", "info")
+        
+        colors = {
+            "danger": {"bg": "#fee2e2", "border": "#ef4444", "text": "#991b1b"},
+            "warning": {"bg": "#fef3c7", "border": "#f59e0b", "text": "#92400e"},
+            "success": {"bg": "#d1fae5", "border": "#10b981", "text": "#065f46"},
+            "info": {"bg": "#dbeafe", "border": "#3b82f6", "text": "#1e40af"},
+        }
+
+        theme = colors.get(alert_type, colors["info"])
+
+        content = ft.Row(
+            [
+                ft.Text(alert.get("icon", "ℹ️"), size=24),
+                ft.Text(
+                    alert.get("message", ""),
+                    size=14,
+                    color=theme["text"],
+                    weight=ft.FontWeight.BOLD,
+                    expand=True,
+                ),
+            ],
+            spacing=12,
+        )
+
+        super().__init__(
+            content=content,
+            padding=15,
+            bgcolor=theme["bg"],
+            border_radius=10,
+            border=ft.border.all(2, theme["border"]),
+            margin=ft.margin.only(bottom=10),
+        )
+
+
+class BudgetSummaryCard(ft.Container):
+    """
+    Tarjeta resumen del presupuesto mensual.
+    
+    Args:
+        budget_status (Dict): Estado del presupuesto del mes
+    """
+
+    def __init__(self, budget_status: Dict):
+        if not budget_status.get("budget_exists"):
+            content = ft.Column(
+                [
+                    ft.Icon(
+                        ft.Icons.ACCOUNT_BALANCE_WALLET_OUTLINED,
+                        size=48,
+                        color=ft.Colors.GREY_400,
+                    ),
+                    ft.Text(
+                        "No hay presupuesto configurado",
+                        size=16,
+                        color=ft.Colors.GREY_600,
+                    ),
+                ],
+                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                spacing=10,
+            )
+        else:
+            expense_progress = budget_status.get("expense_progress", 0)
+            is_over = expense_progress >= 100
+
+            content = ft.Column(
+                [
+                    # Título
+                    ft.Row(
+                        [
+                            ft.Icon(
+                                ft.Icons.ACCOUNT_BALANCE_WALLET,
+                                size=28,
+                                color="#667eea",
+                            ),
+                            ft.Text(
+                                "Presupuesto del Mes",
+                                size=18,
+                                weight=ft.FontWeight.BOLD,
+                            ),
+                        ],
+                        spacing=10,
+                    ),
+                    ft.Divider(height=10),
+                    # Estado de gastos
+                    ft.Container(
+                        content=ft.Column(
+                            [
+                                ft.Row(
+                                    [
+                                        ft.Text(
+                                            "Gastos",
+                                            size=13,
+                                            color=ft.Colors.GREY_600,
+                                        ),
+                                        ft.Text(
+                                            f"{expense_progress:.1f}%",
+                                            size=16,
+                                            weight=ft.FontWeight.BOLD,
+                                            color="#ef4444" if is_over else "#22c55e",
+                                        ),
+                                    ],
+                                    alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                                ),
+                                ft.ProgressBar(
+                                    value=min(expense_progress / 100, 1.0),
+                                    color="#ef4444" if is_over else "#22c55e",
+                                    bgcolor=ft.Colors.GREY_200,
+                                    height=6,
+                                ),
+                                ft.Row(
+                                    [
+                                        ft.Text(
+                                            f"{Config.CURRENCY_SYMBOL} {budget_status.get('actual_expenses', 0):.2f}",
+                                            size=12,
+                                            color=ft.Colors.GREY_700,
+                                        ),
+                                        ft.Text(
+                                            f"de {Config.CURRENCY_SYMBOL} {budget_status.get('expense_limit', 0):.2f}",
+                                            size=12,
+                                            color=ft.Colors.GREY_500,
+                                        ),
+                                    ],
+                                    alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                                ),
+                            ],
+                            spacing=5,
+                        ),
+                        padding=10,
+                        bgcolor=ft.Colors.GREY_50,
+                        border_radius=8,
+                    ),
+                    # Días restantes
+                    ft.Row(
+                        [
+                            ft.Icon(ft.Icons.CALENDAR_TODAY, size=16, color=ft.Colors.GREY_500),
+                            ft.Text(
+                                f"Quedan {budget_status.get('days_left', 0)} días del mes",
+                                size=12,
+                                color=ft.Colors.GREY_600,
+                            ),
+                        ],
+                        spacing=5,
+                    ),
+                ],
+                spacing=10,
+            )
+
+        super().__init__(
+            content=content,
+            padding=20,
+            bgcolor=ft.Colors.WHITE,
+            border_radius=12,
+        )
+
+
+class BudgetHistoryTile(ft.Container):
+    """
+    Tile para mostrar un mes en el historial de presupuestos.
+    
+    Args:
+        budget_history (Dict): Datos del presupuesto histórico
+    """
+
+    def __init__(self, budget_history: Dict):
+        expense_progress = budget_history.get("expense_progress", 0)
+        savings_progress = budget_history.get("savings_progress", 0)
+        
+        # Determinar estado general
+        if not budget_history.get("budget_exists"):
+            status_icon = ft.Icons.HELP_OUTLINE
+            status_color = ft.Colors.GREY_400
+            status_text = "Sin presupuesto"
+        elif expense_progress >= 100:
+            status_icon = ft.Icons.CANCEL
+            status_color = "#ef4444"
+            status_text = "Excedido"
+        elif expense_progress >= 90:
+            status_icon = ft.Icons.WARNING
+            status_color = "#f59e0b"
+            status_text = "Ajustado"
+        else:
+            status_icon = ft.Icons.CHECK_CIRCLE
+            status_color = "#22c55e"
+            status_text = "Cumplido"
+
+        content = ft.Row(
+            [
+                # Ícono de estado
+                ft.Container(
+                    content=ft.Icon(status_icon, size=24, color=status_color),
+                    width=50,
+                    height=50,
+                    border_radius=25,
+                    bgcolor=f"{status_color}20",
+                    alignment=ft.alignment.center,
+                ),
+                # Detalles
+                ft.Column(
+                    [
+                        ft.Text(
+                            budget_history.get("month_name", ""),
+                            size=15,
+                            weight=ft.FontWeight.BOLD,
+                        ),
+                        ft.Text(
+                            status_text,
+                            size=12,
+                            color=status_color,
+                        ),
+                    ],
+                    expand=True,
+                    spacing=2,
+                ),
+                # Estadísticas
+                ft.Column(
+                    [
+                        ft.Text(
+                            f"Gastos: {expense_progress:.0f}%",
+                            size=11,
+                            color=ft.Colors.GREY_600,
+                        ),
+                        ft.Text(
+                            f"Ahorros: {savings_progress:.0f}%",
+                            size=11,
+                            color=ft.Colors.GREY_600,
+                        ),
+                    ],
+                    horizontal_alignment=ft.CrossAxisAlignment.END,
+                    spacing=2,
+                ),
+            ],
+            alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+        )
+
+        super().__init__(
+            content=content,
+            padding=15,
+            bgcolor=ft.Colors.WHITE,
+            border_radius=10,
+            margin=ft.margin.only(bottom=8),
+            border=ft.border.all(1, ft.Colors.GREY_200),
+        )

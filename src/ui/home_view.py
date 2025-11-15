@@ -12,7 +12,8 @@ from .widgets import (
     TopExpenseTile,
     CompactCategoryBar,
     CompactTransactionTile,
-    ProjectionCard
+    ProjectionCard,
+    BudgetSummaryCard,  # ⭐ AGREGAR
 )
 from src.utils.config import Config
 from src.utils.helpers import get_month_name
@@ -62,6 +63,12 @@ class HomeView(BaseView):
             expenses_by_category = self.db.get_expenses_by_category(
                 self.current_year, self.current_month
             )
+            # ========== EN EL MÉTODO build() ==========
+            # Después de obtener datos (línea ~67), agregar:
+
+            budget_status = self.db.get_budget_status(
+                self.current_year, self.current_month
+            )  # ⭐ AGREGAR
             top_expenses = self.db.get_top_expenses(
                 self.current_year, self.current_month, limit=3
             )
@@ -222,6 +229,9 @@ class HomeView(BaseView):
             spacing=10,
         )
 
+        # ========== AGREGAR WIDGET DE PRESUPUESTO ==========
+        # Después de mini_cards (línea ~250), agregar:
+        
         # Ensamblar componentes
         content_widgets = [
             month_selector,
@@ -229,6 +239,8 @@ class HomeView(BaseView):
             savings_card,
             ft.Container(height=15),
             mini_cards,
+            ft.Container(height=15),  # ⭐ AGREGAR
+            BudgetSummaryCard(budget_status),  # ⭐ AGREGAR (Widget de presupuesto)
         ]
 
         # Top 3 gastos

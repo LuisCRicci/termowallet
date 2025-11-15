@@ -1,5 +1,5 @@
 """
-Vista de gestión de categorías - SOLUCIÓN FINAL
+Vista de gestión de categorías - CORREGIDA
 Archivo: src/ui/categories_view.py
 """
 
@@ -12,12 +12,7 @@ class CategoriesView(BaseView):
     
     def __init__(self, page: ft.Page, db_manager, show_snackbar_callback):
         super().__init__(page, db_manager, show_snackbar_callback)
-        self.is_saving = False  # Flag para evitar clics múltiples
-        self.on_refresh_callback = None  # ⭐ NUEVO: Callback para refrescar desde main
-
-    def set_refresh_callback(self, callback):
-        """⭐ NUEVO: Establece el callback para refrescar la vista"""
-        self.on_refresh_callback = callback
+        self.is_saving = False  # ⭐ Flag para evitar clics múltiples
 
     def _create_category_tile(self, category):
         """Crea un tile para una categoría"""
@@ -85,7 +80,7 @@ class CategoriesView(BaseView):
 
     def show_add_category_dialog(self, e):
         """Muestra diálogo para añadir categoría"""
-        self.is_saving = False  # Reset flag
+        self.is_saving = False  # ⭐ Reset flag
         
         name_field = ft.TextField(
             label="Nombre", autofocus=True, bgcolor=ft.Colors.WHITE
@@ -110,7 +105,7 @@ class CategoriesView(BaseView):
         )
 
         def save_category(e):
-            # Evitar clics múltiples
+            # ⭐ Evitar clics múltiples
             if self.is_saving:
                 return
             
@@ -118,10 +113,10 @@ class CategoriesView(BaseView):
                 self.show_snackbar("El nombre es obligatorio", error=True)
                 return
 
-            self.is_saving = True  # Bloquear
+            self.is_saving = True  # ⭐ Bloquear
             
             try:
-                # Verificar si ya existe
+                # ⭐ Verificar si ya existe
                 existing = self.db.get_category_by_name(
                     name_field.value.strip(),
                     type_dropdown.value or "expense"
@@ -143,9 +138,8 @@ class CategoriesView(BaseView):
                 self.close_dialog()
                 self.show_snackbar("✅ Categoría creada exitosamente")
                 
-                # ⭐ USAR CALLBACK PARA REFRESCAR
-                if self.on_refresh_callback:
-                    self.on_refresh_callback()
+                # ⭐ FORZAR RECARGA DE LA VISTA
+                self._reload_view()
                 
             except Exception as ex:
                 self.show_snackbar(f"Error: {str(ex)}", error=True)
@@ -153,6 +147,7 @@ class CategoriesView(BaseView):
 
         dialog = ft.AlertDialog(
             title=ft.Text("Nueva Categoría"),
+            # ⭐ CORRECCIÓN: Container con altura
             content=ft.Container(
                 content=ft.Column(
                     [name_field, desc_field, icon_field, color_field, type_dropdown],
@@ -173,7 +168,7 @@ class CategoriesView(BaseView):
 
     def show_edit_category_dialog(self, category):
         """Muestra diálogo para editar categoría"""
-        self.is_saving = False  # Reset flag
+        self.is_saving = False  # ⭐ Reset flag
         
         name_field = ft.TextField(
             label="Nombre", value=category.name, bgcolor=ft.Colors.WHITE
@@ -192,7 +187,7 @@ class CategoriesView(BaseView):
         )
 
         def update_category(e):
-            # Evitar clics múltiples
+            # ⭐ Evitar clics múltiples
             if self.is_saving:
                 return
                 
@@ -200,7 +195,7 @@ class CategoriesView(BaseView):
                 self.show_snackbar("El nombre es obligatorio", error=True)
                 return
 
-            self.is_saving = True  # Bloquear
+            self.is_saving = True  # ⭐ Bloquear
 
             try:
                 self.db.update_category(
@@ -214,9 +209,8 @@ class CategoriesView(BaseView):
                 self.close_dialog()
                 self.show_snackbar("✅ Categoría actualizada")
                 
-                # ⭐ USAR CALLBACK PARA REFRESCAR
-                if self.on_refresh_callback:
-                    self.on_refresh_callback()
+                # ⭐ FORZAR RECARGA DE LA VISTA
+                self._reload_view()
                 
             except Exception as ex:
                 self.show_snackbar(f"Error: {str(ex)}", error=True)
@@ -224,6 +218,7 @@ class CategoriesView(BaseView):
 
         dialog = ft.AlertDialog(
             title=ft.Text("Editar Categoría"),
+            # ⭐ CORRECCIÓN: Container con altura
             content=ft.Container(
                 content=ft.Column(
                     [name_field, desc_field, icon_field, color_field],
@@ -249,9 +244,8 @@ class CategoriesView(BaseView):
                 self.close_dialog()
                 self.show_snackbar("Categoría eliminada")
                 
-                # ⭐ USAR CALLBACK PARA REFRESCAR
-                if self.on_refresh_callback:
-                    self.on_refresh_callback()
+                # ⭐ FORZAR RECARGA DE LA VISTA
+                self._reload_view()
             else:
                 self.show_snackbar("No se puede eliminar esta categoría", error=True)
 
@@ -267,6 +261,27 @@ class CategoriesView(BaseView):
         self.page.overlay.append(dialog)
         dialog.open = True
         self.page.update()
+
+    def _reload_view(self):
+        """⭐ NUEVO: Método para recargar la vista correctamente"""
+        try:
+            # Reconstruir el contenido
+            new_content = self.build()
+            
+            # Buscar el main_container en la página y actualizar su contenido
+            # Esto funciona porque main.py mantiene la referencia al main_container
+            if hasattr(self.page, 'controls') and len(self.page.controls) > 0:
+                main_column = self.page.controls[0]  # ft.Column principal
+                if hasattr(main_column, 'controls') and len(main_column.controls) > 0:
+                    main_container = main_column.controls[0]  # main_container
+                    main_container.content = new_content
+            
+            self.page.update()
+            
+        except Exception as e:
+            print(f"❌ Error al recargar vista: {e}")
+            import traceback
+            traceback.print_exc()
 
     def build(self) -> ft.Control:
         """Construye la vista de categorías"""

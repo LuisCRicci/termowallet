@@ -21,6 +21,7 @@ from src.utils.config import Config
 # Importar vistas modularizadas
 from src.ui import (
     HomeView,
+    BudgetView,  # ⭐ AGREGAR
     AddTransactionView,
     HistoryView,
     ChartsView,
@@ -98,6 +99,7 @@ class ExpenseTrackerApp:
                 ft.NavigationBarDestination(icon=ft.Icons.LIST, label="Historial"),
                 ft.NavigationBarDestination(icon=ft.Icons.PIE_CHART, label="Gráficos"),
                 ft.NavigationBarDestination(icon=ft.Icons.CATEGORY, label="Categorías"),
+                ft.NavigationBarDestination(icon=ft.Icons.ACCOUNT_BALANCE_WALLET, label="Presupuesto"), 
                 ft.NavigationBarDestination(icon=ft.Icons.SETTINGS, label="Ajustes"),
             ],
             on_change=self.on_nav_change,
@@ -119,7 +121,8 @@ class ExpenseTrackerApp:
             2: "history",
             3: "charts",
             4: "categories",
-            5: "settings"
+            5: "budget",      # ⭐ AGREGAR
+            6: "settings"     # ⭐ CAMBIAR DE 5 A 6
         }
 
         view_name = view_map.get(selected, "home")
@@ -182,6 +185,21 @@ class ExpenseTrackerApp:
                 self.db,
                 self.show_snackbar
             )
+            # ⭐ AGREGAR CALLBACK DE REFRESCO
+            view.set_refresh_callback(lambda: self.refresh_current_view())
+        # ⭐ AGREGAR ESTE BLOQUE
+        elif view_name == "budget":
+            view = BudgetView(
+                self.page,
+                self.db,
+                self.show_snackbar,
+                self.current_month,
+                self.current_year,
+                self.handle_month_change
+            )
+            # ⭐ AGREGAR CALLBACK DE REFRESCO
+            view.set_refresh_callback(lambda: self.refresh_current_view())
+        # ⭐ FIN DEL BLOQUE
         elif view_name == "settings":
             view = SettingsView(
                 self.page,

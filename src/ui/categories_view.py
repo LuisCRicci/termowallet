@@ -1,5 +1,5 @@
 """
-Vista de gestión de categorías
+Vista de gestión de categorías - SOLUCIÓN FINAL
 Archivo: src/ui/categories_view.py
 """
 
@@ -9,6 +9,15 @@ from src.utils.config import Config
 
 class CategoriesView(BaseView):
     """Vista de gestión de categorías"""
+    
+    def __init__(self, page: ft.Page, db_manager, show_snackbar_callback):
+        super().__init__(page, db_manager, show_snackbar_callback)
+        self.is_saving = False  # Flag para evitar clics múltiples
+        self.on_refresh_callback = None  # ⭐ NUEVO: Callback para refrescar desde main
+
+    def set_refresh_callback(self, callback):
+        """⭐ NUEVO: Establece el callback para refrescar la vista"""
+        self.on_refresh_callback = callback
 
     def _create_category_tile(self, category):
         """Crea un tile para una categoría"""
@@ -76,6 +85,8 @@ class CategoriesView(BaseView):
 
     def show_add_category_dialog(self, e):
         """Muestra diálogo para añadir categoría"""
+        self.is_saving = False  # Reset flag
+        
         name_field = ft.TextField(
             label="Nombre", autofocus=True, bgcolor=ft.Colors.WHITE
         )
@@ -99,11 +110,28 @@ class CategoriesView(BaseView):
         )
 
         def save_category(e):
+            # Evitar clics múltiples
+            if self.is_saving:
+                return
+            
             if not name_field.value:
                 self.show_snackbar("El nombre es obligatorio", error=True)
                 return
 
+            self.is_saving = True  # Bloquear
+            
             try:
+                # Verificar si ya existe
+                existing = self.db.get_category_by_name(
+                    name_field.value.strip(),
+                    type_dropdown.value or "expense"
+                )
+                
+                if existing:
+                    self.show_snackbar("Ya existe una categoría con ese nombre", error=True)
+                    self.is_saving = False
+                    return
+                
                 self.db.add_category(
                     name=name_field.value.strip(),
                     icon=icon_field.value or "💰",
@@ -111,19 +139,26 @@ class CategoriesView(BaseView):
                     category_type=type_dropdown.value or "expense",
                     description=desc_field.value.strip() if desc_field.value else "",
                 )
+                
                 self.close_dialog()
                 self.show_snackbar("✅ Categoría creada exitosamente")
-                self.refresh()
-                self.page.update()
+                
+                # ⭐ USAR CALLBACK PARA REFRESCAR
+                if self.on_refresh_callback:
+                    self.on_refresh_callback()
+                
             except Exception as ex:
                 self.show_snackbar(f"Error: {str(ex)}", error=True)
+                self.is_saving = False
 
         dialog = ft.AlertDialog(
             title=ft.Text("Nueva Categoría"),
-            content=ft.Column(
-                [name_field, desc_field, icon_field, color_field, type_dropdown],
-                tight=True,
-                scroll=ft.ScrollMode.AUTO,
+            content=ft.Container(
+                content=ft.Column(
+                    [name_field, desc_field, icon_field, color_field, type_dropdown],
+                    tight=True,
+                    scroll=ft.ScrollMode.AUTO,
+                ),
                 height=400,
             ),
             actions=[
@@ -138,6 +173,8 @@ class CategoriesView(BaseView):
 
     def show_edit_category_dialog(self, category):
         """Muestra diálogo para editar categoría"""
+        self.is_saving = False  # Reset flag
+        
         name_field = ft.TextField(
             label="Nombre", value=category.name, bgcolor=ft.Colors.WHITE
         )
@@ -155,9 +192,15 @@ class CategoriesView(BaseView):
         )
 
         def update_category(e):
+            # Evitar clics múltiples
+            if self.is_saving:
+                return
+                
             if not name_field.value:
                 self.show_snackbar("El nombre es obligatorio", error=True)
                 return
+
+            self.is_saving = True  # Bloquear
 
             try:
                 self.db.update_category(
@@ -167,19 +210,26 @@ class CategoriesView(BaseView):
                     color=color_field.value,
                     description=desc_field.value.strip() if desc_field.value else None,
                 )
+                
                 self.close_dialog()
                 self.show_snackbar("✅ Categoría actualizada")
-                self.refresh()
-                self.page.update()
+                
+                # ⭐ USAR CALLBACK PARA REFRESCAR
+                if self.on_refresh_callback:
+                    self.on_refresh_callback()
+                
             except Exception as ex:
                 self.show_snackbar(f"Error: {str(ex)}", error=True)
+                self.is_saving = False
 
         dialog = ft.AlertDialog(
             title=ft.Text("Editar Categoría"),
-            content=ft.Column(
-                [name_field, desc_field, icon_field, color_field],
-                tight=True,
-                scroll=ft.ScrollMode.AUTO,
+            content=ft.Container(
+                content=ft.Column(
+                    [name_field, desc_field, icon_field, color_field],
+                    tight=True,
+                    scroll=ft.ScrollMode.AUTO,
+                ),
                 height=350,
             ),
             actions=[
@@ -198,8 +248,10 @@ class CategoriesView(BaseView):
             if self.db.delete_category(category.id):
                 self.close_dialog()
                 self.show_snackbar("Categoría eliminada")
-                self.refresh()
-                self.page.update()
+                
+                # ⭐ USAR CALLBACK PARA REFRESCAR
+                if self.on_refresh_callback:
+                    self.on_refresh_callback()
             else:
                 self.show_snackbar("No se puede eliminar esta categoría", error=True)
 

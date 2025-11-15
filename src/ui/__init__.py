@@ -4,6 +4,7 @@ Archivo: src/ui/__init__.py
 """
 
 from .home_view import HomeView
+from .budget_view import BudgetView
 from .add_transaction_view import AddTransactionView
 from .history_view import HistoryView
 from .charts_view import ChartsView
@@ -12,6 +13,7 @@ from .settings_view import SettingsView
 
 __all__ = [
     'HomeView',
+    "BudgetView",
     'AddTransactionView',
     'HistoryView',
     'ChartsView',

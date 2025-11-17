@@ -303,24 +303,56 @@ class DatabaseManager:
         return False
 
     def update_transaction(
-        self, transaction_id: int, **kwargs
-    ) -> Optional[Transaction]:
-        """Actualiza una transacción"""
-        transaction = (
-            self.session.query(Transaction)
-            .filter(Transaction.id == transaction_id)
-            .first()
-        )
+            self,
+            transaction_id: int,
+            date: datetime,
+            description: str,
+            amount: float,
+            category_id: int,
+            notes: str = "",
+        ) -> bool:
+            """
+            Actualiza una transacción existente.
+            
+            Args:
+                transaction_id: ID de la transacción a actualizar
+                date: Nueva fecha
+                description: Nueva descripción
+                amount: Nuevo monto
+                category_id: Nuevo ID de categoría
+                notes: Nuevas notas
+                
+            Returns:
+                bool: True si se actualizó correctamente
+            """
+            try:
+                # Buscar la transacción
+                transaction = self.session.query(Transaction).filter_by(id=transaction_id).first()
+                
+                if not transaction:
+                    print(f"❌ Transacción {transaction_id} no encontrada")
+                    return False
+                
+                # Actualizar campos
+                transaction.date = date
+                transaction.description = description
+                transaction.amount = amount
+                transaction.category_id = category_id
+                transaction.notes = notes
+                transaction.updated_at = datetime.now()
+                
+                # Guardar cambios
+                self.session.commit()
+                print(f"✅ Transacción {transaction_id} actualizada correctamente")
+                return True
+                
+            except Exception as e:
+                self.session.rollback()
+                print(f"❌ Error al actualizar transacción: {e}")
+                import traceback
+                traceback.print_exc()
+                return False
 
-        if transaction:
-            for key, value in kwargs.items():
-                if hasattr(transaction, key):
-                    setattr(transaction, key, value)
-
-            setattr(transaction, "updated_at", datetime.now())
-            self.session.commit()
-            return transaction
-        return None
 
     # ========== CATEGORÍAS ==========
 

@@ -77,27 +77,17 @@ class BaseView(ABC):
 
     def close_dialog(self):
         """
-        Cierra cualquier diálogo (AlertDialog) abierto en la página.
-        
-        Busca en el overlay de la página y cierra el primer AlertDialog que encuentre.
+        ⭐ CORRECCIÓN: Cierra diálogos SIN remover del overlay
+        Solo cambia open=False y actualiza la página
         """
         if self.page.overlay and len(self.page.overlay) > 0:
-            dialog = next(
-                (c for c in self.page.overlay if isinstance(c, ft.AlertDialog)),
-                None,
-            )
-            if dialog:
-                dialog.open = False
-                # self.page.overlay.remove(dialog) LINEA COMENTADA PARA EVITAR ERRORES EN EL OVERLAY
-                self.page.update()
+            for control in self.page.overlay:
+                if isinstance(control, ft.AlertDialog):
+                    control.open = False
+        self.page.update()
 
     def show_dialog(self, dialog: ft.AlertDialog):
-        """
-        Muestra un diálogo en la página.
-        
-        Args:
-            dialog: El AlertDialog a mostrar
-        """
+        """Muestra un diálogo en la página"""
         self.page.overlay.append(dialog)
         dialog.open = True
         self.page.update()

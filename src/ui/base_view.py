@@ -88,7 +88,7 @@ class BaseView(ABC):
             )
             if dialog:
                 dialog.open = False
-                self.page.overlay.remove(dialog)
+                # self.page.overlay.remove(dialog) LINEA COMENTADA PARA EVITAR ERRORES EN EL OVERLAY
                 self.page.update()
 
     def show_dialog(self, dialog: ft.AlertDialog):

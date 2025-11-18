@@ -30,6 +30,11 @@ class DatabaseManager:
 
         # Inicializar categorías por defecto si es primera vez
         self._initialize_default_categories()
+        
+        # ✅ NUEVO: Inicializar palabras clave después de categorías
+        self._initialize_default_keywords()
+        
+        print("✅ Base de datos inicializada con categorías y palabras clave")
 
     def _initialize_default_categories(self):
         """Crea categorías predeterminadas si no existen"""
@@ -146,6 +151,515 @@ class DatabaseManager:
             self.session.add_all(default_categories)
             self.session.commit()
 
+    """
+    AGREGAR ESTOS MÉTODOS A DatabaseManager EN database.py
+    Insertar después del método _initialize_default_categories() (línea ~115)
+    """
+
+    def _initialize_default_keywords(self):
+        """
+        ✅ ACTUALIZADO: Inicializa palabras clave por defecto en categorías predeterminadas
+        Se ejecuta automáticamente después de crear las categorías
+        """
+        # Diccionario de palabras clave por defecto para GASTOS
+        default_expense_keywords = {
+            "Alimentación": [
+                "restaurant", "comida", "food", "pizza", "burger", "cafe", "cafeteria",
+                "supermercado", "market", "panaderia", "bakery", "almuerzo", "lunch",
+                "cena", "dinner", "desayuno", "breakfast", "bar", "pub", "mcdonalds",
+                "kfc", "starbucks", "subway", "pollo", "chicken", "bebida", "drink",
+                "cerveza", "beer", "mercado", "bodega", "tienda", "grocery", "bembos",
+                "norky", "china wok", "delivery", "papa rellena", "cevicheria",
+                "polleria", "hamburgueseria", "ceviche", "pollo a la brasa", "chifa",
+                "hamburguesa", "sushi", "anticuchos", "picanteria", "empanadas",
+                "tamales", "churros", "donas", "donuts", "helados", "ice cream",
+                "yogurt", "frozen yogurt", "frutas", "verduras", "vegetales",
+                "carniceria", "butcher", "picarones", "chocolateria", "dulceria",
+                "snacks", "antojitos", "chocolates", "golosinas", "chocolate",
+                "golosina", "snack", "antojito", "salchipapa", "salchipapas",
+                "empanada", "piqueo", "piqueos", "chifles", "papas fritas",
+                "papas a la francesa", "chicharrones", "nachos", "hot dog", "hotdog",
+                "sandwich", "sanguches", "chizitos", "gaseosa", "soda", "refresco",
+                "refrescos", "jugo", "juice", "smoothie", "batido", "agua", "water",
+                "leche", "milk", "yogur", "metro", "wong", "tottus", "plaza vea", "mass"
+            ],
+            "Transporte": [
+                "uber", "taxi", "cabify", "beat", "gasolina", "gas", "petroleo",
+                "grifo", "station", "parking", "estacionamiento", "peaje", "toll",
+                "bus", "metro", "tren", "train", "vuelo", "flight", "avianca",
+                "latam", "transporte", "transport", "movilidad", "pasaje", "ticket",
+                "combustible", "fuel", "mecanico", "mechanic", "repuesto", "llanta",
+                "tire", "revision", "tecnica"
+            ],
+            "Entretenimiento": [
+                "cine", "cinema", "movie", "netflix", "spotify", "amazon prime",
+                "disney", "hbo", "steam", "playstation", "xbox", "nintendo", "juego",
+                "game", "concierto", "concert", "teatro", "theater", "club",
+                "discoteca", "disco", "bar", "karaoke", "bowling", "gimnasio", "gym",
+                "deporte", "sport", "entrada", "ticket", "suscripcion",
+                "subscription", "youtube", "twitch"
+            ],
+            "Servicios": [
+                "luz", "electricity", "agua", "water", "internet", "telefono",
+                "phone", "celular", "mobile", "cable", "tv", "netflix", "sedapal",
+                "enel", "luz del sur", "claro", "movistar", "entel", "bitel", "gas",
+                "natural", "mantenimiento", "maintenance", "reparacion", "repair",
+                "limpieza", "cleaning", "lavanderia", "laundry", "tintoreria",
+                "peluqueria", "salon", "barberia"
+            ],
+            "Salud": [
+                "farmacia", "pharmacy", "doctor", "medico", "clinica", "clinic",
+                "hospital", "dentista", "dentist", "odontologo", "medicina",
+                "medicine", "pastilla", "pill", "vitamina", "vitamin", "laboratorio",
+                "laboratory", "analisis", "examen", "exam", "consulta",
+                "consultation", "terapia", "therapy", "inkafarma", "mifarma",
+                "botica", "optica", "lentes", "glasses"
+            ],
+            "Educación": [
+                "universidad", "university", "colegio", "school", "academia",
+                "institute", "curso", "course", "clase", "class", "libro", "book",
+                "libreria", "bookstore", "capacitacion", "training", "certificacion",
+                "certification", "matricula", "tuition", "pension", "mensualidad",
+                "cuota", "estudios", "tesis", "materiales", "utiles", "supplies"
+            ],
+            "Vivienda": [
+                "alquiler", "rent", "arrendamiento", "inmobiliaria", "casa",
+                "departamento", "apartment", "condominio", "mantenimiento",
+                "reparacion", "pintura", "paint", "constructor", "albanil",
+                "gasfitero", "plumber", "electricista", "electrician", "ferreteria",
+                "hardware", "mueble", "furniture", "decoracion"
+            ],
+            "Compras": [
+                "ropa", "clothes", "zapateria", "shoes", "tienda", "store", "mall",
+                "plaza", "boutique", "zara", "h&m", "forever21", "saga", "ripley",
+                "falabella", "oechsle", "paris", "amazon", "ebay", "mercadolibre",
+                "jockey", "real plaza", "cosmetico", "perfume", "maquillaje",
+                "makeup", "accesorio", "accessory", "reloj", "watch", "joya",
+                "jewelry", "regalo", "gift"
+            ],
+            "Otros Gastos": []
+        }
+        
+        # Diccionario de palabras clave por defecto para INGRESOS
+        default_income_keywords = {
+            "Salario": [
+                "salario", "sueldo", "salary", "pago", "nomina", "payroll",
+                "planilla", "remuneracion", "quincena", "mensualidad",
+                "pago mensual", "haberes", "emolumento", "stipend", "empresa",
+                "company", "employer", "empleador", "trabajo", "work", "job",
+                "aguinaldo", "gratificacion", "bonificacion", "bonus", "cts",
+                "compensacion"
+            ],
+            "Freelance": [
+                "freelance", "free lance", "independiente", "proyecto", "project",
+                "consultoria", "consulting", "honorarios", "fee", "fees",
+                "servicio", "service", "trabajo independiente", "contractor",
+                "contrato", "cliente", "client", "factura", "invoice",
+                "pago por proyecto", "diseño", "design", "desarrollo",
+                "development", "programacion", "programming", "redaccion",
+                "writing", "traduccion", "translation", "asesoria", "advisory"
+            ],
+            "Inversiones": [
+                "inversion", "investment", "dividendo", "dividend", "interes",
+                "interest", "rendimiento", "yield", "ganancia", "profit",
+                "utilidad", "acciones", "stocks", "bolsa", "mercado", "fondo",
+                "fund", "mutual", "etf", "bonos", "bonds", "cripto", "crypto",
+                "bitcoin", "ethereum", "trading", "forex", "plusvalia", "renta",
+                "pasiva", "passive income"
+            ],
+            "Otros Ingresos": [
+                "venta", "sale", "sold", "vendido", "regalo", "gift", "donacion",
+                "donation", "reembolso", "refund", "devolucion", "return",
+                "reintegro", "cashback", "premio", "prize", "award", "ganancia",
+                "loteria", "lottery", "rifa", "sorteo", "herencia", "inheritance",
+                "pension", "retirement", "jubilacion", "alquiler", "renta", "rent",
+                "arrendamiento", "prestamo", "loan", "transferencia", "transfer",
+                "deposito", "deposit", "ingreso extra", "extra income", "propina",
+                "tip", "comision", "commission", "incentivo", "incentive", "rebate",
+                "descuento"
+            ]
+        }
+        
+        try:
+            # Obtener todas las categorías predeterminadas
+            default_categories = self.session.query(Category).filter(
+                Category.is_default == True
+            ).all()
+            
+            updated_count = 0
+            
+            for category in default_categories:
+                # ✅ CORRECCIÓN: Solo actualizar si NO tiene keywords O si están vacías
+                current_keywords = category.get_keywords_list()
+                
+                # Determinar qué diccionario usar según el tipo
+                if category.category_type == "income":
+                    keywords_dict = default_income_keywords
+                else:
+                    keywords_dict = default_expense_keywords
+                
+                # Si la categoría existe en el diccionario y no tiene keywords válidas
+                if category.name in keywords_dict and len(current_keywords) == 0:
+                    category.set_keywords_list(keywords_dict[category.name])
+                    updated_count += 1
+                    print(f"  ✅ Keywords asignadas a: {category.name}")
+            
+            if updated_count > 0:
+                self.session.commit()
+                print(f"✅ {updated_count} categorías actualizadas con palabras clave por defecto")
+            else:
+                print("ℹ️  Las categorías ya tienen palabras clave asignadas")
+            
+        except Exception as e:
+            print(f"⚠️ Error al inicializar palabras clave: {e}")
+            self.session.rollback()
+
+    def restore_default_keywords(self, category_id: Optional[int] = None) -> Dict:
+        """
+        ✅ NUEVO: Restaura palabras clave predeterminadas
+        
+        Args:
+            category_id: ID de categoría específica, o None para todas
+            
+        Returns:
+            Dict con resultado: {
+                "success": bool,
+                "updated_count": int,
+                "categories_updated": List[str],
+                "message": str
+            }
+        """
+        # Diccionarios de palabras clave por defecto (mismo que en _initialize_default_keywords)
+        default_expense_keywords = {
+            "Alimentación": [
+                "restaurant", "comida", "food", "pizza", "burger", "cafe", "cafeteria",
+                "supermercado", "market", "panaderia", "bakery", "almuerzo", "lunch",
+                "cena", "dinner", "desayuno", "breakfast", "bar", "pub", "mcdonalds",
+                "kfc", "starbucks", "subway", "pollo", "chicken", "bebida", "drink",
+                "cerveza", "beer", "mercado", "bodega", "tienda", "grocery", "bembos",
+                "norky", "china wok", "delivery", "papa rellena", "cevicheria",
+                "polleria", "hamburgueseria", "ceviche", "pollo a la brasa", "chifa",
+                "hamburguesa", "sushi", "anticuchos", "picanteria", "empanadas",
+                "tamales", "churros", "donas", "donuts", "helados", "ice cream",
+                "yogurt", "frozen yogurt", "frutas", "verduras", "vegetales",
+                "carniceria", "butcher", "picarones", "chocolateria", "dulceria",
+                "snacks", "antojitos", "chocolates", "golosinas", "chocolate",
+                "golosina", "snack", "antojito", "salchipapa", "salchipapas",
+                "empanada", "piqueo", "piqueos", "chifles", "papas fritas",
+                "papas a la francesa", "chicharrones", "nachos", "hot dog", "hotdog",
+                "sandwich", "sanguches", "chizitos", "gaseosa", "soda", "refresco",
+                "refrescos", "jugo", "juice", "smoothie", "batido", "agua", "water",
+                "leche", "milk", "yogur", "metro", "wong", "tottus", "plaza vea", "mass"
+            ],
+            "Transporte": [
+                "uber", "taxi", "cabify", "beat", "gasolina", "gas", "petroleo",
+                "grifo", "station", "parking", "estacionamiento", "peaje", "toll",
+                "bus", "metro", "tren", "train", "vuelo", "flight", "avianca",
+                "latam", "transporte", "transport", "movilidad", "pasaje", "ticket",
+                "combustible", "fuel", "mecanico", "mechanic", "repuesto", "llanta",
+                "tire", "revision", "tecnica"
+            ],
+            "Entretenimiento": [
+                "cine", "cinema", "movie", "netflix", "spotify", "amazon prime",
+                "disney", "hbo", "steam", "playstation", "xbox", "nintendo", "juego",
+                "game", "concierto", "concert", "teatro", "theater", "club",
+                "discoteca", "disco", "bar", "karaoke", "bowling", "gimnasio", "gym",
+                "deporte", "sport", "entrada", "ticket", "suscripcion",
+                "subscription", "youtube", "twitch"
+            ],
+            "Servicios": [
+                "luz", "electricity", "agua", "water", "internet", "telefono",
+                "phone", "celular", "mobile", "cable", "tv", "netflix", "sedapal",
+                "enel", "luz del sur", "claro", "movistar", "entel", "bitel", "gas",
+                "natural", "mantenimiento", "maintenance", "reparacion", "repair",
+                "limpieza", "cleaning", "lavanderia", "laundry", "tintoreria",
+                "peluqueria", "salon", "barberia"
+            ],
+            "Salud": [
+                "farmacia", "pharmacy", "doctor", "medico", "clinica", "clinic",
+                "hospital", "dentista", "dentist", "odontologo", "medicina",
+                "medicine", "pastilla", "pill", "vitamina", "vitamin", "laboratorio",
+                "laboratory", "analisis", "examen", "exam", "consulta",
+                "consultation", "terapia", "therapy", "inkafarma", "mifarma",
+                "botica", "optica", "lentes", "glasses"
+            ],
+            "Educación": [
+                "universidad", "university", "colegio", "school", "academia",
+                "institute", "curso", "course", "clase", "class", "libro", "book",
+                "libreria", "bookstore", "capacitacion", "training", "certificacion",
+                "certification", "matricula", "tuition", "pension", "mensualidad",
+                "cuota", "estudios", "tesis", "materiales", "utiles", "supplies"
+            ],
+            "Vivienda": [
+                "alquiler", "rent", "arrendamiento", "inmobiliaria", "casa",
+                "departamento", "apartment", "condominio", "mantenimiento",
+                "reparacion", "pintura", "paint", "constructor", "albanil",
+                "gasfitero", "plumber", "electricista", "electrician", "ferreteria",
+                "hardware", "mueble", "furniture", "decoracion"
+            ],
+            "Compras": [
+                "ropa", "clothes", "zapateria", "shoes", "tienda", "store", "mall",
+                "plaza", "boutique", "zara", "h&m", "forever21", "saga", "ripley",
+                "falabella", "oechsle", "paris", "amazon", "ebay", "mercadolibre",
+                "jockey", "real plaza", "cosmetico", "perfume", "maquillaje",
+                "makeup", "accesorio", "accessory", "reloj", "watch", "joya",
+                "jewelry", "regalo", "gift"
+            ],
+            "Otros Gastos": []
+        }
+        
+        default_income_keywords = {
+            "Salario": [
+                "salario", "sueldo", "salary", "pago", "nomina", "payroll",
+                "planilla", "remuneracion", "quincena", "mensualidad",
+                "pago mensual", "haberes", "emolumento", "stipend", "empresa",
+                "company", "employer", "empleador", "trabajo", "work", "job",
+                "aguinaldo", "gratificacion", "bonificacion", "bonus", "cts",
+                "compensacion"
+            ],
+            "Freelance": [
+                "freelance", "free lance", "independiente", "proyecto", "project",
+                "consultoria", "consulting", "honorarios", "fee", "fees",
+                "servicio", "service", "trabajo independiente", "contractor",
+                "contrato", "cliente", "client", "factura", "invoice",
+                "pago por proyecto", "diseño", "design", "desarrollo",
+                "development", "programacion", "programming", "redaccion",
+                "writing", "traduccion", "translation", "asesoria", "advisory"
+            ],
+            "Inversiones": [
+                "inversion", "investment", "dividendo", "dividend", "interes",
+                "interest", "rendimiento", "yield", "ganancia", "profit",
+                "utilidad", "acciones", "stocks", "bolsa", "mercado", "fondo",
+                "fund", "mutual", "etf", "bonos", "bonds", "cripto", "crypto",
+                "bitcoin", "ethereum", "trading", "forex", "plusvalia", "renta",
+                "pasiva", "passive income"
+            ],
+            "Otros Ingresos": [
+                "venta", "sale", "sold", "vendido", "regalo", "gift", "donacion",
+                "donation", "reembolso", "refund", "devolucion", "return",
+                "reintegro", "cashback", "premio", "prize", "award", "ganancia",
+                "loteria", "lottery", "rifa", "sorteo", "herencia", "inheritance",
+                "pension", "retirement", "jubilacion", "alquiler", "renta", "rent",
+                "arrendamiento", "prestamo", "loan", "transferencia", "transfer",
+                "deposito", "deposit", "ingreso extra", "extra income", "propina",
+                "tip", "comision", "commission", "incentivo", "incentive", "rebate",
+                "descuento"
+            ]
+        }
+        
+        try:
+            updated_count = 0
+            categories_updated = []
+            
+            # Determinar qué categorías procesar
+            if category_id:
+                # Restaurar una categoría específica
+                category = self.get_category_by_id(category_id)
+                if not category:
+                    return {
+                        "success": False,
+                        "updated_count": 0,
+                        "categories_updated": [],
+                        "message": "Categoría no encontrada"
+                    }
+                
+                if not category.is_default:
+                    return {
+                        "success": False,
+                        "updated_count": 0,
+                        "categories_updated": [],
+                        "message": "Solo se pueden restaurar categorías predeterminadas"
+                    }
+                
+                categories_to_process = [category]
+            else:
+                # Restaurar todas las categorías predeterminadas
+                categories_to_process = self.session.query(Category).filter(
+                    Category.is_default == True
+                ).all()
+            
+            # Procesar categorías
+            for category in categories_to_process:
+                # Determinar qué diccionario usar
+                if category.category_type == "income":
+                    keywords_dict = default_income_keywords
+                else:
+                    keywords_dict = default_expense_keywords
+                
+                # Si la categoría existe en el diccionario de defaults
+                if category.name in keywords_dict:
+                    # Restaurar keywords (sobrescribir las actuales)
+                    category.set_keywords_list(keywords_dict[category.name])
+                    updated_count += 1
+                    categories_updated.append(category.name)
+                    print(f"  🔄 Keywords restauradas: {category.name}")
+            
+            if updated_count > 0:
+                self.session.commit()
+                message = f"✅ {updated_count} categoría(s) restaurada(s) correctamente"
+            else:
+                message = "ℹ️ No hay categorías para restaurar"
+            
+            return {
+                "success": True,
+                "updated_count": updated_count,
+                "categories_updated": categories_updated,
+                "message": message
+            }
+            
+        except Exception as e:
+            print(f"❌ Error al restaurar keywords: {e}")
+            self.session.rollback()
+            return {
+                "success": False,
+                "updated_count": 0,
+                "categories_updated": [],
+                "message": f"Error: {str(e)}"
+            }
+
+
+    def load_keywords_to_categorizer(self, categorizer):
+        """
+        ✅ NUEVO: Carga las palabras clave desde la BD al categorizador
+        
+        Args:
+            categorizer: Instancia de TransactionCategorizer
+            
+        Returns:
+            bool: True si se cargó correctamente
+        """
+        try:
+            # Obtener todas las categorías
+            all_categories = self.session.query(Category).all()
+            
+            for category in all_categories:
+                # Obtener keywords de la categoría
+                keywords = category.get_keywords_list()
+                
+                if keywords:
+                    # Determinar tipo de transacción
+                    transaction_type = category.category_type
+                    
+                    # Establecer keywords en el categorizador
+                    categorizer.set_keywords(
+                        category.name,
+                        keywords,
+                        transaction_type
+                    )
+            
+            return True
+            
+        except Exception as e:
+            print(f"❌ Error al cargar keywords al categorizador: {e}")
+            return False
+
+
+    def sync_keywords_from_categorizer(self, categorizer, category_name: str, 
+                                    transaction_type: str = "expense"):
+        """
+        ✅ NUEVO: Sincroniza keywords desde el categorizador a la BD
+        
+        Args:
+            categorizer: Instancia de TransactionCategorizer
+            category_name: Nombre de la categoría
+            transaction_type: Tipo de transacción
+            
+        Returns:
+            bool: True si se sincronizó correctamente
+        """
+        try:
+            # Buscar la categoría en la BD
+            category = self.session.query(Category).filter(
+                Category.name == category_name,
+                Category.category_type == transaction_type
+            ).first()
+            
+            if not category:
+                print(f"⚠️ Categoría '{category_name}' no encontrada")
+                return False
+            
+            # Obtener keywords del categorizador
+            keywords = categorizer.get_keywords_for_category(
+                category_name, 
+                transaction_type
+            )
+            
+            # Actualizar en la BD
+            category.set_keywords_list(keywords)
+            self.session.commit()
+            
+            return True
+            
+        except Exception as e:
+            print(f"❌ Error al sincronizar keywords: {e}")
+            self.session.rollback()
+            return False
+
+
+    def update_category_keywords(self, category_id: int, keywords: List[str]) -> bool:
+        """
+        ✅ NUEVO: Actualiza las palabras clave de una categoría
+        
+        Args:
+            category_id: ID de la categoría
+            keywords: Lista de palabras clave
+            
+        Returns:
+            bool: True si se actualizó correctamente
+        """
+        try:
+            category = self.get_category_by_id(category_id)
+            
+            if not category:
+                return False
+            
+            category.set_keywords_list(keywords)
+            self.session.commit()
+            return True
+            
+        except Exception as e:
+            print(f"❌ Error al actualizar keywords: {e}")
+            self.session.rollback()
+            return False
+
+
+    def get_categories_with_keywords(self, transaction_type: Optional[str] = None) -> Dict:
+        """
+        ✅ NUEVO: Obtiene categorías con sus palabras clave en formato dict
+        
+        Args:
+            transaction_type: "expense" o "income" (opcional)
+            
+        Returns:
+            Dict: {category_id: {"name": str, "keywords": List[str]}}
+        """
+        try:
+            query = self.session.query(Category)
+            
+            if transaction_type:
+                query = query.filter(Category.category_type == transaction_type)
+            
+            categories = query.all()
+            
+            result = {}
+            for cat in categories:
+                result[cat.id] = {
+                    "name": cat.name,
+                    "keywords": cat.get_keywords_list(),
+                    "type": cat.category_type
+                }
+            
+            return result
+            
+        except Exception as e:
+            print(f"❌ Error al obtener categorías con keywords: {e}")
+            return {}
+    
+    
+    
+    
+    
+    
     # ========== LIMPIEZA DE BASE DE DATOS ==========
 
     def clear_all_transactions(self) -> bool:
@@ -179,11 +693,26 @@ class DatabaseManager:
             self.session.query(Category).filter(Category.is_default == False).delete()
             # Eliminar presupuestos
             self.session.query(MonthlyBudget).delete()
+            
+            # ✅ NUEVO: Limpiar palabras clave de categorías predeterminadas
+            default_categories = self.session.query(Category).filter(
+                Category.is_default == True
+            ).all()
+            
+            for category in default_categories:
+                category.keywords = None  # Limpiar palabras clave existentes
+            
             self.session.commit()
+            
+            # ✅ NUEVO: Re-inicializar palabras clave por defecto
+            self._initialize_default_keywords()
+            
+            print("✅ Base de datos reseteada y palabras clave reinicializadas")
             return True
+            
         except Exception as e:
+            print(f"❌ Error al resetear base de datos: {e}")
             self.session.rollback()
-            print(f"Error al resetear base de datos: {e}")
             return False
 
     def get_database_stats(self) -> Dict:

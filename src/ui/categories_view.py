@@ -1,5 +1,5 @@
 """
-Vista de gestión de categorías - CORREGIDA
+Vista de gestión de categorías - CON PALABRAS CLAVE
 Archivo: src/ui/categories_view.py
 """
 
@@ -8,14 +8,17 @@ from .base_view import BaseView
 from src.utils.config import Config
 
 class CategoriesView(BaseView):
-    """Vista de gestión de categorías"""
+    """Vista de gestión de categorías con palabras clave"""
     
     def __init__(self, page: ft.Page, db_manager, show_snackbar_callback):
         super().__init__(page, db_manager, show_snackbar_callback)
-        self.is_saving = False  # ⭐ Flag para evitar clics múltiples
+        self.is_saving = False
 
     def _create_category_tile(self, category):
-        """Crea un tile para una categoría"""
+        """Crea un tile para una categoría CON indicador de palabras clave"""
+        keywords_list = category.get_keywords_list()
+        keywords_count = len(keywords_list)
+        
         return ft.Container(
             content=ft.Row(
                 [
@@ -35,36 +38,52 @@ class CategoriesView(BaseView):
                                 weight=ft.FontWeight.BOLD,
                             ),
                             ft.Text(
-                                (
-                                    category.description
-                                    if category.description
-                                    else "Sin descripción"
-                                ),
+                                category.description if category.description else "Sin descripción",
                                 size=12,
                                 color=ft.Colors.GREY_600,
                             ),
+                            # ✅ NUEVO: Mostrar cantidad de palabras clave
+                            ft.Container(
+                                content=ft.Row(
+                                    [
+                                        ft.Icon(ft.Icons.KEY, size=14, color="#3b82f6"),
+                                        ft.Text(
+                                            f"{keywords_count} palabras clave",
+                                            size=11,
+                                            color="#3b82f6",
+                                            weight=ft.FontWeight.BOLD,
+                                        ),
+                                    ],
+                                    spacing=5,
+                                ),
+                                padding=ft.padding.only(top=5),
+                            ) if keywords_count > 0 else ft.Container(),
                         ],
                         expand=True,
                         spacing=2,
                     ),
                     ft.Row(
                         [
+                            # ✅ NUEVO: Botón para editar palabras clave
+                            ft.IconButton(
+                                icon=ft.Icons.LABEL,
+                                icon_size=20,
+                                tooltip="Palabras clave",
+                                icon_color="#667eea",
+                                on_click=lambda e, cat=category: self.show_keywords_dialog(cat),
+                            ),
                             ft.IconButton(
                                 icon=ft.Icons.EDIT,
                                 icon_size=20,
                                 tooltip="Editar",
-                                on_click=lambda e, cat=category: self.show_edit_category_dialog(
-                                    cat
-                                ),
+                                on_click=lambda e, cat=category: self.show_edit_category_dialog(cat),
                                 disabled=category.is_default,
                             ),
                             ft.IconButton(
                                 icon=ft.Icons.DELETE,
                                 icon_size=20,
                                 tooltip="Eliminar",
-                                on_click=lambda e, cat=category: self.delete_category(
-                                    cat
-                                ),
+                                on_click=lambda e, cat=category: self.delete_category(cat),
                                 disabled=category.is_default,
                             ),
                         ]
@@ -78,21 +97,192 @@ class CategoriesView(BaseView):
             margin=ft.margin.only(bottom=10),
         )
 
+    def show_keywords_dialog(self, category):
+        """✅ NUEVO: Muestra diálogo para gestionar palabras clave"""
+        keywords_list = category.get_keywords_list()
+        
+        # Campo para agregar nueva palabra clave
+        new_keyword_field = ft.TextField(
+            label="Nueva palabra clave",
+            hint_text="Escribe una palabra y presiona Enter",
+            bgcolor=ft.Colors.WHITE,
+            on_submit=lambda e: add_keyword(e),
+        )
+        
+        # Lista de palabras clave actuales
+        keywords_chips = ft.Row(
+            wrap=True,
+            spacing=5,
+            run_spacing=5,
+        )
+        
+        def update_chips():
+            """Actualiza los chips de palabras clave"""
+            keywords_chips.controls.clear()
+            current_keywords = category.get_keywords_list()
+            
+            if not current_keywords:
+                keywords_chips.controls.append(
+                    ft.Text(
+                        "No hay palabras clave. Agrega algunas para mejorar la categorización automática.",
+                        size=12,
+                        color=ft.Colors.GREY_600,
+                        italic=True,
+                    )
+                )
+            else:
+                for keyword in sorted(current_keywords):
+                    keywords_chips.controls.append(
+                        ft.Chip(
+                            label=ft.Text(keyword, size=12),
+                            on_delete=lambda e, k=keyword: remove_keyword(k),
+                            bgcolor=ft.Colors.LIGHT_BLUE_100,
+                            delete_icon_color=ft.Colors.RED_400,
+                        )
+                    )
+            self.page.update()
+        
+        def add_keyword(e):
+            """Agrega una nueva palabra clave"""
+            if not new_keyword_field.value or not new_keyword_field.value.strip():
+                return
+            
+            keyword = new_keyword_field.value.strip().lower()
+            current_keywords = category.get_keywords_list()
+            
+            if keyword in current_keywords:
+                self.show_snackbar("Esta palabra clave ya existe", error=True)
+                return
+            
+            current_keywords.append(keyword)
+            category.set_keywords_list(current_keywords)
+            self.db.session.commit()
+            
+            new_keyword_field.value = ""
+            update_chips()
+        
+        def remove_keyword(keyword):
+            """Elimina una palabra clave"""
+            current_keywords = category.get_keywords_list()
+            if keyword in current_keywords:
+                current_keywords.remove(keyword)
+                category.set_keywords_list(current_keywords)
+                self.db.session.commit()
+                update_chips()
+        
+        def save_and_close(e):
+            """Guarda y cierra el diálogo"""
+            self.close_dialog()
+            self.show_snackbar("✅ Palabras clave actualizadas")
+            self._reload_view()
+        
+        # Inicializar chips
+        update_chips()
+        
+        dialog = ft.AlertDialog(
+            title=ft.Row(
+                [
+                    ft.Icon(ft.Icons.LABEL, color=category.color, size=28),
+                    ft.Text(
+                        f"Palabras clave: {category.name}",
+                        size=18,
+                        weight=ft.FontWeight.BOLD,
+                    ),
+                ],
+                spacing=10,
+            ),
+            content=ft.Container(
+                content=ft.Column(
+                    [
+                        # Información
+                        ft.Container(
+                            content=ft.Column(
+                                [
+                                    ft.Text(
+                                        "💡 Las palabras clave ayudan a categorizar automáticamente las transacciones",
+                                        size=12,
+                                        color=ft.Colors.BLUE_700,
+                                    ),
+                                    ft.Text(
+                                        "Ejemplo: Para 'Alimentación' agrega: pizza, restaurant, supermercado, etc.",
+                                        size=11,
+                                        color=ft.Colors.GREY_600,
+                                        italic=True,
+                                    ),
+                                ],
+                                spacing=5,
+                            ),
+                            padding=10,
+                            bgcolor=ft.Colors.BLUE_50,
+                            border_radius=8,
+                        ),
+                        ft.Divider(height=20),
+                        # Campo para agregar
+                        new_keyword_field,
+                        ft.ElevatedButton(
+                            "Agregar",
+                            icon=ft.Icons.ADD,
+                            on_click=add_keyword,
+                            style=ft.ButtonStyle(
+                                bgcolor=category.color,
+                                color=ft.Colors.WHITE,
+                            ),
+                        ),
+                        ft.Divider(height=20),
+                        # Lista de palabras clave
+                        ft.Text(
+                            f"📝 Palabras clave actuales ({len(category.get_keywords_list())})",
+                            size=14,
+                            weight=ft.FontWeight.BOLD,
+                        ),
+                        ft.Container(
+                            content=keywords_chips,
+                            height=200,
+                            padding=10,
+                            bgcolor=ft.Colors.WHITE,
+                            border_radius=8,
+                        ),
+                    ],
+                    spacing=10,
+                    scroll=ft.ScrollMode.AUTO,
+                ),
+                width=550,
+                height=500,
+            ),
+            actions=[
+                ft.TextButton(
+                    "Cerrar",
+                    on_click=save_and_close,
+                ),
+            ],
+            actions_alignment=ft.MainAxisAlignment.END,
+        )
+        
+        self.show_dialog(dialog)
+
     def show_add_category_dialog(self, e):
-        """Muestra diálogo para añadir categoría"""
-        self.is_saving = False  # ⭐ Reset flag
+        """Muestra diálogo para añadir categoría CON palabras clave"""
+        self.is_saving = False
         
         name_field = ft.TextField(
-            label="Nombre", autofocus=True, bgcolor=ft.Colors.WHITE
+            label="Nombre", 
+            autofocus=True, 
+            bgcolor=ft.Colors.WHITE
         )
         desc_field = ft.TextField(
-            label="Descripción", multiline=True, bgcolor=ft.Colors.WHITE
+            label="Descripción", 
+            multiline=True, 
+            bgcolor=ft.Colors.WHITE
         )
         icon_field = ft.TextField(
-            label="Icono (emoji)", value="💰", bgcolor=ft.Colors.WHITE
+            label="Icono (emoji)", 
+            value="💰", 
+            bgcolor=ft.Colors.WHITE
         )
         color_field = ft.TextField(
-            label="Color (hex)", value="#3b82f6", bgcolor=ft.Colors.WHITE
+            label="Color (hex)", 
+            value="#3b82f6", 
+            bgcolor=ft.Colors.WHITE
         )
         type_dropdown = ft.Dropdown(
             label="Tipo",
@@ -103,9 +293,18 @@ class CategoriesView(BaseView):
             value="expense",
             bgcolor=ft.Colors.WHITE,
         )
+        
+        # ✅ NUEVO: Campo para palabras clave
+        keywords_field = ft.TextField(
+            label="Palabras clave (opcional)",
+            hint_text="Ejemplo: pizza, restaurant, comida (separadas por comas)",
+            multiline=True,
+            min_lines=2,
+            max_lines=3,
+            bgcolor=ft.Colors.WHITE,
+        )
 
         def save_category(e):
-            # ⭐ Evitar clics múltiples
             if self.is_saving:
                 return
             
@@ -113,10 +312,9 @@ class CategoriesView(BaseView):
                 self.show_snackbar("El nombre es obligatorio", error=True)
                 return
 
-            self.is_saving = True  # ⭐ Bloquear
+            self.is_saving = True
             
             try:
-                # ⭐ Verificar si ya existe
                 existing = self.db.get_category_by_name(
                     name_field.value.strip(),
                     type_dropdown.value or "expense"
@@ -127,7 +325,8 @@ class CategoriesView(BaseView):
                     self.is_saving = False
                     return
                 
-                self.db.add_category(
+                # Crear categoría
+                category = self.db.add_category(
                     name=name_field.value.strip(),
                     icon=icon_field.value or "💰",
                     color=color_field.value or "#3b82f6",
@@ -135,10 +334,18 @@ class CategoriesView(BaseView):
                     description=desc_field.value.strip() if desc_field.value else "",
                 )
                 
+                # ✅ NUEVO: Agregar palabras clave si se proporcionaron
+                if keywords_field.value and keywords_field.value.strip():
+                    keywords = [
+                        k.strip() 
+                        for k in keywords_field.value.split(',') 
+                        if k.strip()
+                    ]
+                    category.set_keywords_list(keywords)
+                    self.db.session.commit()
+                
                 self.close_dialog()
                 self.show_snackbar("✅ Categoría creada exitosamente")
-                
-                # ⭐ FORZAR RECARGA DE LA VISTA
                 self._reload_view()
                 
             except Exception as ex:
@@ -147,14 +354,27 @@ class CategoriesView(BaseView):
 
         dialog = ft.AlertDialog(
             title=ft.Text("Nueva Categoría"),
-            # ⭐ CORRECCIÓN: Container con altura
             content=ft.Container(
                 content=ft.Column(
-                    [name_field, desc_field, icon_field, color_field, type_dropdown],
+                    [
+                        name_field, 
+                        desc_field, 
+                        icon_field, 
+                        color_field, 
+                        type_dropdown,
+                        ft.Divider(height=10),
+                        keywords_field,  # ✅ NUEVO
+                        ft.Text(
+                            "💡 Las palabras clave ayudan a categorizar automáticamente",
+                            size=11,
+                            color=ft.Colors.GREY_600,
+                            italic=True,
+                        ),
+                    ],
                     tight=True,
                     scroll=ft.ScrollMode.AUTO,
                 ),
-                height=400,
+                height=500,
             ),
             actions=[
                 ft.TextButton("Cancelar", on_click=lambda _: self.close_dialog()),
@@ -162,16 +382,16 @@ class CategoriesView(BaseView):
             ],
         )
 
-        self.page.overlay.append(dialog)
-        dialog.open = True
-        self.page.update()
+        self.show_dialog(dialog)
 
     def show_edit_category_dialog(self, category):
         """Muestra diálogo para editar categoría"""
-        self.is_saving = False  # ⭐ Reset flag
+        self.is_saving = False
         
         name_field = ft.TextField(
-            label="Nombre", value=category.name, bgcolor=ft.Colors.WHITE
+            label="Nombre", 
+            value=category.name, 
+            bgcolor=ft.Colors.WHITE
         )
         desc_field = ft.TextField(
             label="Descripción",
@@ -180,14 +400,17 @@ class CategoriesView(BaseView):
             bgcolor=ft.Colors.WHITE,
         )
         icon_field = ft.TextField(
-            label="Icono (emoji)", value=category.icon, bgcolor=ft.Colors.WHITE
+            label="Icono (emoji)", 
+            value=category.icon, 
+            bgcolor=ft.Colors.WHITE
         )
         color_field = ft.TextField(
-            label="Color (hex)", value=category.color, bgcolor=ft.Colors.WHITE
+            label="Color (hex)", 
+            value=category.color, 
+            bgcolor=ft.Colors.WHITE
         )
 
         def update_category(e):
-            # ⭐ Evitar clics múltiples
             if self.is_saving:
                 return
                 
@@ -195,7 +418,7 @@ class CategoriesView(BaseView):
                 self.show_snackbar("El nombre es obligatorio", error=True)
                 return
 
-            self.is_saving = True  # ⭐ Bloquear
+            self.is_saving = True
 
             try:
                 self.db.update_category(
@@ -208,8 +431,6 @@ class CategoriesView(BaseView):
                 
                 self.close_dialog()
                 self.show_snackbar("✅ Categoría actualizada")
-                
-                # ⭐ FORZAR RECARGA DE LA VISTA
                 self._reload_view()
                 
             except Exception as ex:
@@ -218,7 +439,6 @@ class CategoriesView(BaseView):
 
         dialog = ft.AlertDialog(
             title=ft.Text("Editar Categoría"),
-            # ⭐ CORRECCIÓN: Container con altura
             content=ft.Container(
                 content=ft.Column(
                     [name_field, desc_field, icon_field, color_field],
@@ -233,9 +453,7 @@ class CategoriesView(BaseView):
             ],
         )
 
-        self.page.overlay.append(dialog)
-        dialog.open = True
-        self.page.update()
+        self.show_dialog(dialog)
 
     def delete_category(self, category):
         """Elimina una categoría"""
@@ -243,8 +461,6 @@ class CategoriesView(BaseView):
             if self.db.delete_category(category.id):
                 self.close_dialog()
                 self.show_snackbar("Categoría eliminada")
-                
-                # ⭐ FORZAR RECARGA DE LA VISTA
                 self._reload_view()
             else:
                 self.show_snackbar("No se puede eliminar esta categoría", error=True)
@@ -258,22 +474,17 @@ class CategoriesView(BaseView):
             ],
         )
 
-        self.page.overlay.append(dialog)
-        dialog.open = True
-        self.page.update()
+        self.show_dialog(dialog)
 
     def _reload_view(self):
-        """⭐ NUEVO: Método para recargar la vista correctamente"""
+        """Recarga la vista correctamente"""
         try:
-            # Reconstruir el contenido
             new_content = self.build()
             
-            # Buscar el main_container en la página y actualizar su contenido
-            # Esto funciona porque main.py mantiene la referencia al main_container
             if hasattr(self.page, 'controls') and len(self.page.controls) > 0:
-                main_column = self.page.controls[0]  # ft.Column principal
+                main_column = self.page.controls[0]
                 if hasattr(main_column, 'controls') and len(main_column.controls) > 0:
-                    main_container = main_column.controls[0]  # main_container
+                    main_container = main_column.controls[0]
                     main_container.content = new_content
             
             self.page.update()
@@ -313,6 +524,17 @@ class CategoriesView(BaseView):
         return ft.Column(
             [
                 ft.Text("🏷️ Categorías", size=24, weight=ft.FontWeight.BOLD),
+                ft.Container(
+                    content=ft.Text(
+                        "💡 Tip: Haz clic en el icono 🏷️ para gestionar las palabras clave de cada categoría",
+                        size=12,
+                        color=ft.Colors.GREY_600,
+                        italic=True,
+                    ),
+                    padding=10,
+                    bgcolor=ft.Colors.BLUE_50,
+                    border_radius=8,
+                ),
                 ft.Divider(),
                 category_tabs,
             ],

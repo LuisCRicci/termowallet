@@ -1,5 +1,5 @@
 """
-Vista para añadir transacciones
+Vista para añadir transacciones - CON SOPORTE PARA COLUMNA TIPO
 Archivo: src/ui/add_transaction_view.py
 """
 
@@ -167,9 +167,16 @@ class AddTransactionView(BaseView):
                 [
                     ft.Text("Selecciona un archivo CSV o Excel con tus transacciones."),
                     ft.Text(
-                        "Formato esperado: fecha, descripcion, monto",
+                        "Formato esperado: fecha, descripcion, monto, tipo (opcional)",
                         size=12,
                         italic=True,
+                    ),
+                    ft.Container(height=5),
+                    ft.Text(
+                        "La columna 'tipo' puede contener: gasto, ingreso, expense, income",
+                        size=11,
+                        italic=True,
+                        color=ft.Colors.GREY_600,
                     ),
                 ],
                 tight=True,
@@ -185,46 +192,78 @@ class AddTransactionView(BaseView):
         self.page.update()
 
     def process_import_file(self, file_path: str):
-        """Procesa el archivo importado"""
+        """✅ ACTUALIZADO: Procesa el archivo importado con soporte para tipos"""
         self.close_dialog()
         self.show_snackbar("Procesando archivo...")
 
         try:
+            # 1. Cargar archivo
             success, message = self.processor.load_file(file_path)
             if not success:
                 self.show_snackbar(message, error=True)
                 return
 
+            # 2. Validar columnas
             success, message = self.processor.validate_columns()
             if not success:
                 self.show_snackbar(message, error=True)
                 return
 
+            # 3. Limpiar datos
             success, message = self.processor.clean_data()
             if not success:
                 self.show_snackbar(message, error=True)
                 return
 
-            categories = self.db.get_all_categories("expense")
-            categories_map = {}
-            for cat in categories:
+            # 4. Obtener mapas de categorías (gastos e ingresos)
+            categories_expense = self.db.get_all_categories("expense")
+            categories_income = self.db.get_all_categories("income")
+
+            # Crear mapas de categorías
+            categories_map_expense = {}
+            for cat in categories_expense:
                 try:
                     safe_id = int(cat.id) if cat.id is not None else 0
-                    safe_name = (
-                        str(cat.name) if cat.name is not None else "Sin categoría"
-                    )
-                    categories_map[safe_id] = safe_name
+                    safe_name = str(cat.name) if cat.name is not None else "Sin categoría"
+                    categories_map_expense[safe_id] = safe_name
                 except Exception as e:
-                    print(f"⚠️ Error al procesar categoría: {e}")
+                    print(f"⚠️ Error al procesar categoría de gasto: {e}")
                     continue
 
-            self.processor.categorize_transactions(categories_map)
+            categories_map_income = {}
+            for cat in categories_income:
+                try:
+                    safe_id = int(cat.id) if cat.id is not None else 0
+                    safe_name = str(cat.name) if cat.name is not None else "Sin categoría"
+                    categories_map_income[safe_id] = safe_name
+                except Exception as e:
+                    print(f"⚠️ Error al procesar categoría de ingreso: {e}")
+                    continue
+
+            # 5. Categorizar transacciones
+            self.processor.categorize_transactions(
+                categories_map_expense, 
+                categories_map_income
+            )
+
+            # 6. Obtener datos procesados
             processed_data = self.processor.get_processed_data()
+
+            # 7. Insertar en base de datos
             count = self.db.add_transactions_bulk(processed_data)
 
-            self.show_snackbar(f"✅ {count} transacciones importadas exitosamente")
+            # 8. Mostrar resumen
+            summary = self.processor.get_summary()
+            
+            message = f"✅ {count} transacciones importadas exitosamente\n"
+            message += f"📊 Gastos: {summary.get('count_expenses', 0)} | "
+            message += f"Ingresos: {summary.get('count_income', 0)}"
+
+            self.show_snackbar(message)
 
         except Exception as ex:
+            import traceback
+            traceback.print_exc()
             self.show_snackbar(f"Error al importar: {str(ex)}", error=True)
 
     def build(self) -> ft.Control:

@@ -240,6 +240,7 @@ class CompactCategoryBar(ft.Row):
 class CompactTransactionTile(ft.Container):
     """
     Tile compacto para mostrar una transacción.
+    ⭐ CORREGIDO: Detecta tipo de transacción y muestra color/signo correcto
     
     Args:
         transaction: Objeto Transaction de la base de datos
@@ -264,6 +265,14 @@ class CompactTransactionTile(ft.Container):
         )
         amount = float(transaction.amount) if transaction.amount else 0.0
         date_str = transaction.date.strftime("%d %b") if transaction.date else ""
+        
+        # ⭐ CORRECCIÓN: Detectar tipo de transacción
+        transaction_type = (
+            str(transaction.transaction_type)
+            if hasattr(transaction, 'transaction_type') and transaction.transaction_type
+            else "expense"
+        )
+        is_income = transaction_type == "income"
 
         content = ft.Row(
             [
@@ -293,11 +302,12 @@ class CompactTransactionTile(ft.Container):
                     expand=True,
                     spacing=2,
                 ),
+                # ⭐ CORRECCIÓN: Mostrar signo y color según el tipo
                 ft.Text(
-                    f"- {Config.CURRENCY_SYMBOL} {amount:.2f}",
+                    f"{'+ ' if is_income else '- '}{Config.CURRENCY_SYMBOL} {amount:.2f}",
                     size=14,
                     weight=ft.FontWeight.BOLD,
-                    color="#ef4444",
+                    color="#22c55e" if is_income else "#ef4444",
                 ),
             ],
             spacing=10,
@@ -309,7 +319,6 @@ class CompactTransactionTile(ft.Container):
             border_radius=8,
             bgcolor="#f9fafb",
         )
-
 
 class ProjectionCard(ft.Container):
     """

@@ -1,5 +1,5 @@
 """
-Procesador de Transacciones Bancarias - CORREGIDO
+Procesador de Transacciones Bancarias - CON SOPORTE PARA COLUMNA TIPO
 Archivo: src/business/processor.py
 """
 
@@ -58,7 +58,7 @@ class TransactionProcessor:
     def validate_columns(self) -> Tuple[bool, str]:
         """
         Valida que el archivo tenga las columnas necesarias
-        Columnas esperadas: fecha, descripcion, monto (nombres flexibles)
+        Columnas esperadas: fecha, descripcion, monto, tipo (opcional)
         """
         if self.df is None:
             return False, "No hay datos cargados"
@@ -111,6 +111,14 @@ class TransactionProcessor:
             if any(keyword in col for keyword in amount_keywords)
         ]
 
+        # ✅ NUEVO: Buscar columna de tipo
+        type_keywords = ["tipo", "type", "categoria", "category"]
+        type_cols = [
+            col
+            for col in columns_lower
+            if any(keyword in col for keyword in type_keywords)
+        ]
+
         # Validaciones
         if not date_cols:
             return (
@@ -134,18 +142,24 @@ class TransactionProcessor:
             original_desc_col = self.df.columns[columns_lower.index(desc_cols[0])]
             original_amount_col = self.df.columns[columns_lower.index(amount_cols[0])]
 
-            self.df = self.df.rename(
-                columns={
-                    original_date_col: "fecha",
-                    original_desc_col: "descripcion",
-                    original_amount_col: "monto",
-                }
-            )
+            rename_dict = {
+                original_date_col: "fecha",
+                original_desc_col: "descripcion",
+                original_amount_col: "monto",
+            }
 
-            return (
-                True,
-                f"Columnas validadas: fecha='{original_date_col}', descripcion='{original_desc_col}', monto='{original_amount_col}'",
-            )
+            # ✅ NUEVO: Renombrar columna de tipo si existe
+            if type_cols:
+                original_type_col = self.df.columns[columns_lower.index(type_cols[0])]
+                rename_dict[original_type_col] = "tipo"
+
+            self.df = self.df.rename(columns=rename_dict)
+
+            message = f"Columnas validadas: fecha='{original_date_col}', descripcion='{original_desc_col}', monto='{original_amount_col}'"
+            if type_cols:
+                message += f", tipo='{original_type_col}'"
+
+            return (True, message)
         except Exception as e:
             return False, f"Error al normalizar columnas: {str(e)}"
 
@@ -214,16 +228,46 @@ class TransactionProcessor:
                 self.errors.append(f"⚠️ {zero_count} montos en cero eliminados")
                 self.df = self.df[self.df["monto"] > 0.001]
 
-            # 7. Eliminar duplicados exactos
+            # ✅ NUEVO: 7. Procesar columna tipo si existe
+            if "tipo" in self.df.columns:
+                self.df["tipo"] = self.df["tipo"].astype(str).str.lower().str.strip()
+                
+                # Normalizar valores de tipo
+                type_mapping = {
+                    "gasto": "expense",
+                    "gastos": "expense",
+                    "expense": "expense",
+                    "egreso": "expense",
+                    "egresos": "expense",
+                    "salida": "expense",
+                    "ingreso": "income",
+                    "ingresos": "income",
+                    "income": "income",
+                    "entrada": "income",
+                }
+                
+                self.df["tipo"] = self.df["tipo"].map(type_mapping)
+                
+                # Contar valores inválidos
+                invalid_types = self.df["tipo"].isna().sum()
+                if invalid_types > 0:
+                    self.errors.append(f"⚠️ {invalid_types} tipos inválidos (se asumirán como gastos)")
+                    # Rellenar tipos inválidos con "expense"
+                    self.df["tipo"] = self.df["tipo"].fillna("expense")
+            else:
+                # Si no existe columna tipo, asumir todos son gastos
+                self.df["tipo"] = "expense"
+
+            # 8. Eliminar duplicados exactos
             duplicates = self.df.duplicated().sum()
             if duplicates > 0:
                 self.errors.append(f"⚠️ {duplicates} registros duplicados eliminados")
                 self.df = self.df.drop_duplicates()
 
-            # 8. Ordenar por fecha (más reciente primero)
+            # 9. Ordenar por fecha (más reciente primero)
             self.df = self.df.sort_values("fecha", ascending=False)
 
-            # 9. Reset index
+            # 10. Reset index
             self.df = self.df.reset_index(drop=True)
 
             final_count = len(self.df)
@@ -241,50 +285,53 @@ class TransactionProcessor:
         except Exception as e:
             return False, f"❌ Error en limpieza: {str(e)}"
 
-    def categorize_transactions(self, categories_map: Dict[int, str]) -> bool:
+    def categorize_transactions(self, categories_map_expense: Dict[int, str], 
+                                categories_map_income: Dict[int, str]) -> bool:
         """
-        Asigna categorías a las transacciones basándose en la descripción
-        categories_map: {category_id: category_name} - ya con tipos simples
+        Asigna categorías a las transacciones basándose en la descripción y el tipo
+        categories_map_expense: {category_id: category_name} para gastos
+        categories_map_income: {category_id: category_name} para ingresos
         """
         if self.df is None or len(self.df) == 0:
             return False
 
         try:
-            # Invertir el mapa con tipos seguros
-            name_to_id = {}
-            for cat_id, cat_name in categories_map.items():
+            # Invertir los mapas con tipos seguros
+            name_to_id_expense = {}
+            for cat_id, cat_name in categories_map_expense.items():
                 safe_name = str(cat_name).strip().lower()
-                name_to_id[safe_name] = int(cat_id)
+                name_to_id_expense[safe_name] = int(cat_id)
 
-            # Aplicar categorización (asegurar strings)
-            self.df["categoria"] = self.df["descripcion"].apply(
-                lambda desc: self.categorizer.categorize(
-                    str(desc).lower() if desc else ""
-                )
-            )
+            name_to_id_income = {}
+            for cat_id, cat_name in categories_map_income.items():
+                safe_name = str(cat_name).strip().lower()
+                name_to_id_income[safe_name] = int(cat_id)
 
-            # Convertir a minúsculas para matching consistente
-            self.df["categoria_lower"] = self.df["categoria"].str.lower().str.strip()
+            # Aplicar categorización según el tipo
+            def assign_category(row):
+                desc = str(row["descripcion"]).lower() if row["descripcion"] else ""
+                transaction_type = row["tipo"]
+                
+                # ✅ CORREGIDO: Pasar el tipo de transacción al categorizador
+                category_name = self.categorizer.categorize(desc, transaction_type)
+                category_name_lower = category_name.lower().strip()
+                
+                # Elegir el mapa correcto según el tipo
+                if transaction_type == "income":
+                    name_to_id = name_to_id_income
+                    default_id = next(iter(name_to_id_income.values())) if name_to_id_income else 1
+                else:
+                    name_to_id = name_to_id_expense
+                    default_id = name_to_id_expense.get("otros gastos", 
+                                 name_to_id_expense.get("otros", 
+                                 next(iter(name_to_id_expense.values())) if name_to_id_expense else 1))
+                
+                # Buscar ID de categoría
+                category_id = name_to_id.get(category_name_lower, default_id)
+                
+                return category_id
 
-            # Asignar IDs usando el mapa seguro
-            self.df["categoria_id"] = self.df["categoria_lower"].map(name_to_id)
-
-            # Establecer categoría por defecto
-            default_id = 1  # ID por defecto
-            if "otros gastos" in name_to_id:
-                default_id = name_to_id["otros gastos"]
-            elif "otros" in name_to_id:
-                default_id = name_to_id["otros"]
-            elif name_to_id:
-                default_id = next(iter(name_to_id.values()))
-
-            # Rellenar valores nulos y convertir a entero
-            self.df["categoria_id"] = (
-                self.df["categoria_id"].fillna(default_id).astype(int)
-            )
-
-            # Limpiar columna temporal
-            self.df.drop(columns=["categoria_lower"], inplace=True, errors="ignore")
+            self.df["categoria_id"] = self.df.apply(assign_category, axis=1)
 
             return True
 
@@ -308,7 +355,7 @@ class TransactionProcessor:
                         "description": str(row["descripcion"]),
                         "amount": float(row["monto"]),
                         "category_id": int(row["categoria_id"]),
-                        "transaction_type": "expense",  # Por defecto son gastos
+                        "transaction_type": str(row["tipo"]),  # ✅ Ahora usa el tipo del CSV
                         "source": "imported",
                         "original_description": str(row["descripcion"]),
                     }
@@ -321,18 +368,26 @@ class TransactionProcessor:
             return []
 
     def get_summary(self) -> Dict:
-        """Obtiene un resumen de los datos procesados - CORREGIDO"""
+        """Obtiene un resumen de los datos procesados"""
         if self.df is None or len(self.df) == 0:
             return {"status": "empty", "message": "No hay datos procesados"}
 
         try:
+            # ✅ NUEVO: Separar estadísticas por tipo
+            expenses = self.df[self.df["tipo"] == "expense"]
+            incomes = self.df[self.df["tipo"] == "income"]
+
             summary = {
                 "status": "success",
                 "original_count": self.original_count,
                 "processed_count": len(self.df),
-                "total_transactions": len(self.df),  # ✅ AGREGADO PARA EL TEST
+                "total_transactions": len(self.df),
                 "removed_count": self.original_count - len(self.df),
                 "total_amount": float(self.df["monto"].sum()),
+                "total_expenses": float(expenses["monto"].sum()) if len(expenses) > 0 else 0.0,
+                "total_income": float(incomes["monto"].sum()) if len(incomes) > 0 else 0.0,
+                "count_expenses": len(expenses),
+                "count_income": len(incomes),
                 "average_amount": float(self.df["monto"].mean()),
                 "min_amount": float(self.df["monto"].min()),
                 "max_amount": float(self.df["monto"].max()),
@@ -342,12 +397,6 @@ class TransactionProcessor:
                 },
                 "errors": self.errors,
             }
-
-            # Resumen por categoría si existe
-            if "categoria" in self.df.columns:
-                summary["by_category"] = (
-                    self.df.groupby("categoria")["monto"].sum().to_dict()
-                )
 
             return summary
 

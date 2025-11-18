@@ -191,8 +191,13 @@ class AddTransactionView(BaseView):
         dialog.open = True
         self.page.update()
 
+    """
+    Actualización del método process_import_file en add_transaction_view.py
+    Para usar las palabras clave almacenadas en la base de datos
+    """
+
     def process_import_file(self, file_path: str):
-        """✅ ACTUALIZADO: Procesa el archivo importado con soporte para tipos"""
+        """✅ ACTUALIZADO: Usa palabras clave de la BD para categorizar"""
         self.close_dialog()
         self.show_snackbar("Procesando archivo...")
 
@@ -215,9 +220,29 @@ class AddTransactionView(BaseView):
                 self.show_snackbar(message, error=True)
                 return
 
-            # 4. Obtener mapas de categorías (gastos e ingresos)
+            # 4. Obtener categorías con sus palabras clave de la BD
             categories_expense = self.db.get_all_categories("expense")
             categories_income = self.db.get_all_categories("income")
+
+            # ✅ NUEVO: Actualizar el categorizador con las palabras clave de la BD
+            from src.business.categorizer import TransactionCategorizer
+            categorizer = TransactionCategorizer()
+            
+            # Cargar palabras clave personalizadas de gastos
+            for cat in categories_expense:
+                keywords_from_db = cat.get_keywords_list()
+                if keywords_from_db:
+                    # Reemplazar las palabras clave predeterminadas con las de la BD
+                    categorizer.set_keywords(cat.name, keywords_from_db, "expense")
+            
+            # Cargar palabras clave personalizadas de ingresos
+            for cat in categories_income:
+                keywords_from_db = cat.get_keywords_list()
+                if keywords_from_db:
+                    categorizer.set_keywords(cat.name, keywords_from_db, "income")
+            
+            # Actualizar el categorizador del processor
+            self.processor.categorizer = categorizer
 
             # Crear mapas de categorías
             categories_map_expense = {}
@@ -265,6 +290,11 @@ class AddTransactionView(BaseView):
             import traceback
             traceback.print_exc()
             self.show_snackbar(f"Error al importar: {str(ex)}", error=True)
+
+
+
+
+
 
     def build(self) -> ft.Control:
         """Construye la vista"""

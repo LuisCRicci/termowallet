@@ -161,6 +161,58 @@ class TransactionCategorizer:
         if category in keywords_dict:
             if keyword.lower() not in keywords_dict[category]:
                 keywords_dict[category].append(keyword.lower())
+    
+    def remove_keyword(self, category: str, keyword: str, transaction_type: str = "expense") -> bool:
+        """
+        Elimina una palabra clave de una categoría
+        
+        Args:
+            category: Nombre de la categoría
+            keyword: Palabra clave a eliminar
+            transaction_type: "expense" o "income"
+            
+        Returns:
+            bool: True si se eliminó correctamente
+        """
+        keywords_dict = self.income_keywords if transaction_type == "income" else self.expense_keywords
+        
+        if category in keywords_dict:
+            keyword_lower = keyword.lower()
+            if keyword_lower in keywords_dict[category]:
+                keywords_dict[category].remove(keyword_lower)
+                return True
+        return False
+    
+    def set_keywords(self, category: str, keywords: List[str], transaction_type: str = "expense"):
+        """
+        Establece todas las palabras clave de una categoría (reemplaza las existentes)
+        
+        Args:
+            category: Nombre de la categoría
+            keywords: Lista de palabras clave
+            transaction_type: "expense" o "income"
+        """
+        keywords_dict = self.income_keywords if transaction_type == "income" else self.expense_keywords
+        
+        if category not in keywords_dict:
+            keywords_dict[category] = []
+        
+        # Convertir todas a minúsculas y eliminar duplicados
+        keywords_dict[category] = list(set([k.lower().strip() for k in keywords if k.strip()]))
+    
+    def get_keywords_for_category(self, category: str, transaction_type: str = "expense") -> List[str]:
+        """
+        Obtiene las palabras clave de una categoría específica
+        
+        Args:
+            category: Nombre de la categoría
+            transaction_type: "expense" o "income"
+            
+        Returns:
+            Lista de palabras clave
+        """
+        keywords_dict = self.income_keywords if transaction_type == "income" else self.expense_keywords
+        return keywords_dict.get(category, [])
 
     def get_categories(self, transaction_type: str = "expense") -> list:
         """

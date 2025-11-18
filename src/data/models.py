@@ -1,5 +1,5 @@
 """
-Modelos de Base de Datos usando SQLAlchemy 2.0 - con tipado estático
+Modelos de Base de Datos usando SQLAlchemy 2.0 - CON PALABRAS CLAVE
 Archivo: src/data/models.py
 """
 
@@ -18,6 +18,7 @@ from sqlalchemy import (
     ForeignKey,
     Boolean,
     Column,
+    Text,  # ✅ NUEVO: Para almacenar keywords como JSON/texto
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
@@ -27,7 +28,7 @@ class Base(DeclarativeBase):
 
 
 class Category(Base):
-    """Modelo de Categorías - Para Gastos e Ingresos"""
+    """Modelo de Categorías - Para Gastos e Ingresos CON PALABRAS CLAVE"""
 
     __tablename__ = "categories"
 
@@ -38,6 +39,11 @@ class Category(Base):
     icon: Mapped[str] = mapped_column(String(50), default="💰")
     category_type: Mapped[str] = mapped_column(String(20), default="expense")
     is_default: Mapped[bool] = mapped_column(Boolean, default=False)
+    
+    # ✅ NUEVO: Palabras clave para categorización automática
+    keywords: Mapped[Optional[str]] = mapped_column(Text, default=None)
+    # Se almacenan como JSON string: '["palabra1", "palabra2", "palabra3"]'
+    
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime, default=datetime.now, onupdate=datetime.now
@@ -50,6 +56,24 @@ class Category(Base):
 
     def __repr__(self):
         return f"<Category(name='{self.name}', type='{self.category_type}')>"
+    
+    # ✅ NUEVO: Métodos helper para manejar keywords
+    def get_keywords_list(self) -> List[str]:
+        """Retorna las palabras clave como lista"""
+        if not self.keywords:
+            return []
+        try:
+            import json
+            return json.loads(self.keywords)
+        except:
+            return []
+    
+    def set_keywords_list(self, keywords_list: List[str]):
+        """Establece las palabras clave desde una lista"""
+        import json
+        # Limpiar y convertir a minúsculas
+        clean_keywords = [k.lower().strip() for k in keywords_list if k.strip()]
+        self.keywords = json.dumps(clean_keywords, ensure_ascii=False)
 
 
 class Transaction(Base):

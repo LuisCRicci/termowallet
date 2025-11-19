@@ -1,5 +1,5 @@
 """
-Vista de Presupuestos Mensuales - CORREGIDA
+Vista de Presupuestos Mensuales - CON SELECTOR DE AÑO
 Archivo: src/ui/budget_view.py
 """
 
@@ -7,7 +7,6 @@ import flet as ft
 from datetime import datetime
 from .base_view import BaseView
 from .widgets import (
-    MonthSelector,
     BudgetProgressCard,
     BudgetAlertBanner,
     BudgetHistoryTile,
@@ -17,7 +16,7 @@ from src.utils.helpers import get_month_name
 
 
 class BudgetView(BaseView):
-    """Vista de gestión de presupuestos mensuales"""
+    """Vista de gestión de presupuestos mensuales con selector de año"""
 
     def __init__(
         self,
@@ -32,7 +31,7 @@ class BudgetView(BaseView):
         self.current_month = current_month
         self.current_year = current_year
         self.on_month_change = on_month_change
-        self.is_saving = False  # ⭐ Flag para evitar clics múltiples
+        self.is_saving = False
 
     def previous_month(self, e):
         """Navega al mes anterior"""
@@ -51,10 +50,99 @@ class BudgetView(BaseView):
         else:
             self.current_month += 1
         self.on_month_change(self.current_month, self.current_year)
+    
+    def show_year_month_picker(self, e):
+        """Muestra un diálogo para seleccionar cualquier año/mes"""
+        current_year = datetime.now().year
+        
+        # Crear lista de años (10 años atrás hasta 5 años adelante)
+        years = list(range(current_year - 10, current_year + 6))
+        
+        # Crear lista de meses
+        months = [
+            "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+            "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
+        ]
+        
+        selected_year = ft.Ref[ft.Dropdown]()
+        selected_month = ft.Ref[ft.Dropdown]()
+        
+        def on_confirm(e):
+            try:
+                new_year = int(selected_year.current.value)
+                new_month = int(selected_month.current.value)
+                
+                self.current_month = new_month
+                self.current_year = new_year
+                
+                self.close_dialog()
+                self.on_month_change(self.current_month, self.current_year)
+                
+            except Exception as ex:
+                self.show_snackbar(f"Error: {str(ex)}", error=True)
+        
+        dialog = ft.AlertDialog(
+            title=ft.Text("Seleccionar Período"),
+            content=ft.Container(
+                content=ft.Column(
+                    [
+                        ft.Text(
+                            "Elige el mes y año del presupuesto:",
+                            size=13,
+                            color=ft.Colors.GREY_700,
+                        ),
+                        ft.Container(height=10),
+                        ft.Dropdown(
+                            ref=selected_month,
+                            label="Mes",
+                            value=str(self.current_month),
+                            options=[
+                                ft.dropdown.Option(str(i+1), months[i]) 
+                                for i in range(12)
+                            ],
+                            width=300,
+                        ),
+                        ft.Dropdown(
+                            ref=selected_year,
+                            label="Año",
+                            value=str(self.current_year),
+                            options=[
+                                ft.dropdown.Option(str(year), str(year)) 
+                                for year in years
+                            ],
+                            width=300,
+                        ),
+                        ft.Container(
+                            content=ft.Text(
+                                "💡 Puedes crear presupuestos para meses pasados o futuros",
+                                size=11,
+                                color=ft.Colors.GREY_600,
+                                italic=True,
+                            ),
+                            padding=10,
+                            bgcolor=ft.Colors.BLUE_50,
+                            border_radius=8,
+                        ),
+                    ],
+                    tight=True,
+                ),
+                height=300,
+            ),
+            actions=[
+                ft.TextButton("Cancelar", on_click=lambda _: self.close_dialog()),
+                ft.ElevatedButton(
+                    "Seleccionar",
+                    icon=ft.Icons.CHECK,
+                    on_click=on_confirm,
+                ),
+            ],
+        )
+        
+        self.show_dialog(dialog)
 
     def show_create_budget_dialog(self, e):
         """Muestra diálogo para crear/editar presupuesto"""
-        self.is_saving = False  # ⭐ Reset flag
+        self.is_saving = False
         
         # Obtener presupuesto existente si hay
         existing_budget = self.db.get_monthly_budget(
@@ -95,7 +183,6 @@ class BudgetView(BaseView):
         )
 
         def save_budget(e):
-            # ⭐ Evitar clics múltiples
             if self.is_saving:
                 return
             
@@ -110,7 +197,7 @@ class BudgetView(BaseView):
                     )
                     return
 
-                self.is_saving = True  # ⭐ Bloquear
+                self.is_saving = True
 
                 self.db.create_or_update_budget(
                     year=self.current_year,
@@ -124,7 +211,6 @@ class BudgetView(BaseView):
                 self.close_dialog()
                 self.show_snackbar("✅ Presupuesto guardado exitosamente")
                 
-                # ⭐ FORZAR RECARGA usando el callback
                 self.on_month_change(self.current_month, self.current_year)
 
             except ValueError:
@@ -138,7 +224,6 @@ class BudgetView(BaseView):
             title=ft.Text(
                 f"Presupuesto {get_month_name(self.current_month)} {self.current_year}"
             ),
-            # ⭐ CORRECCIÓN: Container con altura
             content=ft.Container(
                 content=ft.Column(
                     [
@@ -167,7 +252,7 @@ class BudgetView(BaseView):
                     tight=True,
                     scroll=ft.ScrollMode.AUTO,
                 ),
-                height=500,  # ⭐ Altura en el Container
+                height=500,
             ),
             actions=[
                 ft.TextButton("Cancelar", on_click=lambda _: self.close_dialog()),
@@ -188,7 +273,6 @@ class BudgetView(BaseView):
                 self.close_dialog()
                 self.show_snackbar("Presupuesto eliminado")
                 
-                # ⭐ FORZAR RECARGA usando el callback
                 self.on_month_change(self.current_month, self.current_year)
             else:
                 self.show_snackbar("Error al eliminar", error=True)
@@ -213,16 +297,94 @@ class BudgetView(BaseView):
             self.current_year, self.current_month
         )
         alerts = self.db.get_budget_alerts(self.current_year, self.current_month)
-        budget_history = self.db.get_budget_history(6)
+        budget_history = self.db.get_budget_history(12)
 
-        # Selector de mes
+        # 🆕 Selector de mes/año mejorado
         month_label = get_month_name(self.current_month)
-        month_selector = MonthSelector(
-            self.current_month,
-            self.current_year,
-            self.previous_month,
-            self.next_month,
-            month_label,
+        
+        # Determinar si es mes pasado, presente o futuro
+        now = datetime.now()
+        is_current = (self.current_year == now.year and self.current_month == now.month)
+        is_past = (self.current_year < now.year) or (
+            self.current_year == now.year and self.current_month < now.month
+        )
+        is_future = not is_current and not is_past
+        
+        # Badge de estado temporal
+        if is_current:
+            time_badge = ft.Container(
+                content=ft.Text("📍 Mes Actual", size=11, color=ft.Colors.WHITE),
+                bgcolor="#10b981",
+                padding=ft.padding.symmetric(6, 10),
+                border_radius=12,
+            )
+        elif is_past:
+            time_badge = ft.Container(
+                content=ft.Text("📅 Mes Pasado", size=11, color=ft.Colors.WHITE),
+                bgcolor="#6b7280",
+                padding=ft.padding.symmetric(6, 10),
+                border_radius=12,
+            )
+        else:
+            time_badge = ft.Container(
+                content=ft.Text("🔮 Mes Futuro", size=11, color=ft.Colors.WHITE),
+                bgcolor="#3b82f6",
+                padding=ft.padding.symmetric(6, 10),
+                border_radius=12,
+            )
+        
+        month_selector = ft.Container(
+            content=ft.Column(
+                [
+                    ft.Row(
+                        [
+                            ft.IconButton(
+                                icon=ft.Icons.ARROW_BACK_IOS,
+                                on_click=self.previous_month,
+                                icon_size=20,
+                                tooltip="Mes anterior",
+                            ),
+                            ft.Column(
+                                [
+                                    ft.Text(
+                                        f"{month_label} {self.current_year}",
+                                        size=22,
+                                        weight=ft.FontWeight.BOLD,
+                                        text_align=ft.TextAlign.CENTER,
+                                    ),
+                                    time_badge,
+                                ],
+                                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                                spacing=5,
+                                expand=True,
+                            ),
+                            ft.IconButton(
+                                icon=ft.Icons.ARROW_FORWARD_IOS,
+                                on_click=self.next_month,
+                                icon_size=20,
+                                tooltip="Mes siguiente",
+                            ),
+                        ],
+                        alignment=ft.MainAxisAlignment.CENTER,
+                    ),
+                    ft.Container(
+                        content=ft.ElevatedButton(
+                            "Ir a otra fecha",
+                            icon=ft.Icons.CALENDAR_MONTH,
+                            on_click=self.show_year_month_picker,
+                            style=ft.ButtonStyle(
+                                bgcolor=ft.Colors.WHITE,
+                                color=Config.PRIMARY_COLOR,
+                            ),
+                        ),
+                        alignment=ft.alignment.center,
+                    ),
+                ],
+                spacing=10,
+            ),
+            padding=15,
+            bgcolor=ft.Colors.WHITE,
+            border_radius=12,
         )
 
         # Contenido inicial
@@ -255,7 +417,7 @@ class BudgetView(BaseView):
                             color=ft.Colors.GREY_600,
                         ),
                         ft.Text(
-                            "Establece metas de ingresos, gastos y ahorros para este mes",
+                            f"Crea un presupuesto para {month_label} {self.current_year}",
                             size=14,
                             color=ft.Colors.GREY_500,
                             text_align=ft.TextAlign.CENTER,

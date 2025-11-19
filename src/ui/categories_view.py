@@ -136,7 +136,7 @@ class CategoriesView(BaseView):
                         ft.Chip(
                             label=ft.Text(keyword, size=12),
                             on_delete=lambda e, k=keyword: remove_keyword(k),
-                            bgcolor=ft.Colors.LIGHT_BLUE_100,
+                            bgcolor=ft.Colors.LIGHT_BLUE_400,
                             delete_icon_color=ft.Colors.RED_400,
                         )
                     )
@@ -236,11 +236,16 @@ class CategoriesView(BaseView):
                             weight=ft.FontWeight.BOLD,
                         ),
                         ft.Container(
-                            content=keywords_chips,
                             height=200,
                             padding=10,
-                            bgcolor=ft.Colors.WHITE,
+                            bgcolor=ft.Colors.GREY_50,
                             border_radius=8,
+                            content=ft.ListView(
+                                controls=[keywords_chips],
+                                spacing=5,
+                                auto_scroll=False,
+                                expand=True,
+                            ),
                         ),
                     ],
                     spacing=10,

@@ -132,7 +132,7 @@ class SettingsView(BaseView):
             title=ft.Row(
                 [
                     ft.Icon(ft.Icons.DANGEROUS, color="#ef4444", size=32),
-                    ft.Text("⚠️ ADVERTENCIA CRÍTICA", weight=ft.FontWeight.BOLD),
+                    ft.Text("ADVERTENCIA CRÍTICA", weight=ft.FontWeight.BOLD),
                 ],
                 spacing=10,
             ),

@@ -7,6 +7,8 @@ import flet as ft
 from .base_view import BaseView
 from src.utils.config import Config
 
+from .widgets import EmojiPickerDialog, ColorPickerDialog
+
 class CategoriesView(BaseView):
     """Vista de gestión de categorías con palabras clave"""
     

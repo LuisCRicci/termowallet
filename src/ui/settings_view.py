@@ -1,5 +1,5 @@
 """
-Vista de configuraciÃ³n y gestiÃ³n de datos
+Vista de configuración y gestión de datos
 Archivo: src/ui/settings_view.py
 """
 
@@ -32,7 +32,7 @@ class SettingsView(BaseView):
                     ft.Container(height=10),
                     ft.Container(
                         content=ft.Text(
-                            "⚠️ Esta acción NO se puede deshacer",
+                            "⚠️ Esta acción NO se puede deshacer",
                             size=14,
                             weight=ft.FontWeight.BOLD,
                             color="#ef4444",
@@ -132,7 +132,7 @@ class SettingsView(BaseView):
             title=ft.Row(
                 [
                     ft.Icon(ft.Icons.DANGEROUS, color="#ef4444", size=32),
-                    ft.Text("⚠️¸ ADVERTENCIA CRÍTICA", weight=ft.FontWeight.BOLD),
+                    ft.Text("⚠️ ADVERTENCIA CRÍTICA", weight=ft.FontWeight.BOLD),
                 ],
                 spacing=10,
             ),
@@ -145,13 +145,13 @@ class SettingsView(BaseView):
                     ),
                     ft.Container(height=5),
                     ft.Text(
-                        f"â€¢ {stats.get('total_transactions', 0)} transacciones", size=14
+                        f"• {stats.get('total_transactions', 0)} transacciones", size=14
                     ),
                     ft.Text(
-                        f"â€¢ {stats.get('custom_categories', 0)} categorías personalizadas",
+                        f"• {stats.get('custom_categories', 0)} categorías personalizadas",
                         size=14,
                     ),
-                    ft.Text("â€¢ Todos los presupuestos configurados", size=14),
+                    ft.Text("• Todos los presupuestos configurados", size=14),
                     ft.Container(height=10),
                     ft.Container(
                         content=ft.Column(
@@ -164,7 +164,7 @@ class SettingsView(BaseView):
                                     text_align=ft.TextAlign.CENTER,
                                 ),
                                 ft.Text(
-                                    "Solo se mantendrÃ¡n las categorÃ­as predeterminadas",
+                                    "Solo se mantendrán las categorías predeterminadas",
                                     size=12,
                                     color=ft.Colors.GREY_700,
                                     text_align=ft.TextAlign.CENTER,
@@ -209,7 +209,92 @@ class SettingsView(BaseView):
             self.page.update()
         else:
             self.show_snackbar("❌ Error al resetear la base de datos", error=True)
-    
+
+    def confirm_restore_keywords(self, e):
+        """✅ NUEVO: Confirma la restauración de palabras clave predeterminadas"""
+        stats = self.db.get_database_stats()
+        default_cats = stats.get("default_categories", 0)
+
+        dialog = ft.AlertDialog(
+            title=ft.Row(
+                [
+                    ft.Icon(ft.Icons.RESTORE, color="#3b82f6", size=28),
+                    ft.Text("Restaurar Palabras Clave", weight=ft.FontWeight.BOLD),
+                ],
+                spacing=10,
+            ),
+            content=ft.Column(
+                [
+                    ft.Text(
+                        f"Esta acción restaurará las palabras clave predeterminadas de {default_cats} categorías.",
+                        size=16,
+                    ),
+                    ft.Container(height=10),
+                    ft.Container(
+                        content=ft.Column(
+                            [
+                                ft.Text(
+                                    "⚠️ Las palabras clave personalizadas serán reemplazadas",
+                                    size=14,
+                                    weight=ft.FontWeight.BOLD,
+                                    color="#f59e0b",
+                                ),
+                                ft.Text(
+                                    "Solo afecta a categorías predeterminadas",
+                                    size=12,
+                                    color=ft.Colors.GREY_700,
+                                ),
+                            ],
+                            spacing=5,
+                        ),
+                        padding=10,
+                        bgcolor="#fef3c7",
+                        border_radius=8,
+                    ),
+                    ft.Container(height=10),
+                    ft.Text(
+                        "✅ No afecta transacciones ni categorías personalizadas",
+                        size=13,
+                        color=ft.Colors.GREEN_700,
+                    ),
+                ],
+                tight=True,
+            ),
+            actions=[
+                ft.TextButton("Cancelar", on_click=lambda _: self.close_dialog()),
+                ft.ElevatedButton(
+                    "Restaurar Keywords",
+                    on_click=self.restore_keywords,
+                    style=ft.ButtonStyle(bgcolor="#3b82f6", color=ft.Colors.WHITE),
+                ),
+            ],
+        )
+
+        self.page.overlay.append(dialog)
+        dialog.open = True
+        self.page.update()
+
+    def restore_keywords(self, e):
+        """✅ NUEVO: Ejecuta la restauración de palabras clave"""
+        result = self.db.restore_default_keywords()
+        
+        self.close_dialog()
+        
+        if result["success"] and result["updated_count"] > 0:
+            categories_list = ", ".join(result["categories_updated"][:3])
+            if result["updated_count"] > 3:
+                categories_list += f" y {result['updated_count'] - 3} más"
+            
+            self.show_snackbar(
+                f"✅ {result['updated_count']} categorías actualizadas\n"
+                f"🔑 Restauradas: {categories_list}"
+            )
+        else:
+            self.show_snackbar(result["message"])
+        
+        self.refresh()
+        self.page.update()
+
     def build(self) -> ft.Control:
         """Construye la vista de configuración"""
         stats = self.db.get_database_stats()
@@ -264,7 +349,7 @@ class SettingsView(BaseView):
                         size=14,
                     ),
                     ft.Text(
-                        f"💸 Gastos totales:  {Config.CURRENCY_SYMBOL} {stats.get('total_expenses', 0):.2f}",
+                        f"💸 Gastos totales: {Config.CURRENCY_SYMBOL} {stats.get('total_expenses', 0):.2f}",
                         size=14,
                     ),
                     ft.Text(
@@ -365,6 +450,49 @@ class SettingsView(BaseView):
             on_click=self.confirm_clear_custom_categories,
         )
 
+        # ✅ NUEVO: Botón para restaurar palabras clave
+        restore_keywords_btn = ft.Container(
+            content=ft.Row(
+                [
+                    ft.Container(
+                        content=ft.Icon(ft.Icons.RESTORE, size=40, color="#3b82f6"),
+                        width=60,
+                        height=60,
+                        border_radius=30,
+                        bgcolor="#3b82f620",
+                        alignment=ft.alignment.center,
+                    ),
+                    ft.Column(
+                        [
+                            ft.Text(
+                                "Restaurar Palabras Clave",
+                                size=16,
+                                weight=ft.FontWeight.BOLD,
+                            ),
+                            ft.Text(
+                                "Restaura keywords predeterminadas sin borrar datos",
+                                size=12,
+                                color=ft.Colors.GREY_600,
+                            ),
+                        ],
+                        expand=True,
+                        spacing=2,
+                    ),
+                    ft.IconButton(
+                        icon=ft.Icons.ARROW_FORWARD_IOS,
+                        icon_size=20,
+                        on_click=self.confirm_restore_keywords,
+                    ),
+                ],
+                alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+            ),
+            padding=15,
+            border_radius=10,
+            bgcolor=ft.Colors.WHITE,
+            ink=True,
+            on_click=self.confirm_restore_keywords,
+        )
+
         reset_database_btn = ft.Container(
             content=ft.Row(
                 [
@@ -428,16 +556,18 @@ class SettingsView(BaseView):
 
         return ft.Column(
             [
-                ft.Text("⚙️ Configuración",  size=24, weight=ft.FontWeight.BOLD),
+                ft.Text("⚙️ Configuración", size=24, weight=ft.FontWeight.BOLD),
                 ft.Divider(),
                 stats_card,
                 ft.Container(height=10),
-                ft.Text("🗑️ Gestión de Datos",  size=18, weight=ft.FontWeight.BOLD),
+                ft.Text("🗑️ Gestión de Datos", size=18, weight=ft.FontWeight.BOLD),
                 warning_card,
                 ft.Container(height=10),
                 clean_transactions_btn,
                 ft.Container(height=5),
                 clean_categories_btn,
+                ft.Container(height=5),
+                restore_keywords_btn,  # ✅ NUEVO
                 ft.Container(height=5),
                 reset_database_btn,
             ],

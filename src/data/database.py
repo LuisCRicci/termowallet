@@ -318,6 +318,11 @@ class DatabaseManager:
 
     
     
+    """
+    AGREGAR ESTE MÉTODO A database.py
+    Insertar después del método _initialize_default_keywords() (línea ~290)
+    """
+
     def restore_default_keywords(self, category_id: Optional[int] = None) -> Dict:
         """
         ✅ NUEVO: Restaura palabras clave predeterminadas
@@ -520,7 +525,6 @@ class DatabaseManager:
                 "categories_updated": [],
                 "message": f"Error: {str(e)}"
             }
-
     
     
     

@@ -98,7 +98,7 @@ class CategoriesView(BaseView):
         )
 
     def show_keywords_dialog(self, category):
-        """✅ NUEVO: Muestra diálogo para gestionar palabras clave"""
+        """✅ ACTUALIZADO: Muestra diálogo para gestionar palabras clave CON restauración"""
         keywords_list = category.get_keywords_list()
         
         # Campo para agregar nueva palabra clave
@@ -136,7 +136,7 @@ class CategoriesView(BaseView):
                         ft.Chip(
                             label=ft.Text(keyword, size=12),
                             on_delete=lambda e, k=keyword: remove_keyword(k),
-                            bgcolor=ft.Colors.LIGHT_BLUE_400,
+                            bgcolor=ft.Colors.LIGHT_BLUE_100,
                             delete_icon_color=ft.Colors.RED_400,
                         )
                     )
@@ -170,6 +170,65 @@ class CategoriesView(BaseView):
                 self.db.session.commit()
                 update_chips()
         
+        def restore_defaults(e):
+            """✅ NUEVO: Restaura palabras clave predeterminadas de esta categoría"""
+            # Confirmar antes de restaurar
+            def confirm_restore(e):
+                result = self.db.restore_default_keywords(category.id)
+
+                # Cerrar diálogo de confirmación
+                self.close_dialog()
+
+                if result["success"] and result["updated_count"] > 0:
+                    
+                    # Actualizar chips dentro del diálogo
+                    update_chips()
+
+                    # 🔥 Recargar vista principal para actualizar el contador
+                    self._reload_view()
+
+                    self.show_snackbar(f"✅ Keywords restauradas: {category.name}")
+
+                else:
+                    self.show_snackbar(result["message"], error=True)
+
+            
+            # Diálogo de confirmación
+            confirm_dialog = ft.AlertDialog(
+                title=ft.Text("Confirmar Restauración"),
+                content=ft.Column(
+                    [
+                        ft.Text(
+                            f"¿Restaurar las palabras clave predeterminadas de '{category.name}'?",
+                            size=14,
+                        ),
+                        ft.Container(height=10),
+                        ft.Container(
+                            content=ft.Text(
+                                "⚠️ Se perderán las palabras clave personalizadas actuales",
+                                size=12,
+                                color="#f59e0b",
+                                weight=ft.FontWeight.BOLD,
+                            ),
+                            padding=10,
+                            bgcolor="#fef3c7",
+                            border_radius=8,
+                        ),
+                    ],
+                    tight=True,
+                ),
+                actions=[
+                    ft.TextButton("Cancelar", on_click=lambda _: self.close_dialog()),
+                    ft.ElevatedButton(
+                        "Restaurar",
+                        on_click=confirm_restore,
+                        style=ft.ButtonStyle(bgcolor="#3b82f6", color=ft.Colors.WHITE),
+                    ),
+                ],
+            )
+            
+            self.show_dialog(confirm_dialog)
+        
         def save_and_close(e):
             """Guarda y cierra el diálogo"""
             self.close_dialog()
@@ -178,6 +237,18 @@ class CategoriesView(BaseView):
         
         # Inicializar chips
         update_chips()
+        
+        # ✅ NUEVO: Botón de restaurar solo para categorías predeterminadas
+        restore_button = None
+        if category.is_default:
+            restore_button = ft.OutlinedButton(
+                "Restaurar defaults",
+                icon=ft.Icons.RESTORE,
+                on_click=restore_defaults,
+                style=ft.ButtonStyle(
+                    color="#3b82f6",
+                ),
+            )
         
         dialog = ft.AlertDialog(
             title=ft.Row(
@@ -230,10 +301,30 @@ class CategoriesView(BaseView):
                         ),
                         ft.Divider(height=20),
                         # Lista de palabras clave
-                        ft.Text(
-                            f"📝 Palabras clave actuales ({len(category.get_keywords_list())})",
-                            size=14,
-                            weight=ft.FontWeight.BOLD,
+                        ft.Row(
+                            [
+                                ft.Text(
+                                    f"🔑 Palabras clave actuales ({len(category.get_keywords_list())})",
+                                    size=14,
+                                    weight=ft.FontWeight.BOLD,
+                                ),
+                                # ✅ NUEVO: Badge indicando si es categoría default
+                                (
+                                    ft.Container(
+                                        content=ft.Text(
+                                            "Default",
+                                            size=10,
+                                            color=ft.Colors.WHITE,
+                                        ),
+                                        padding=ft.padding.symmetric(horizontal=8, vertical=2),
+                                        bgcolor="#3b82f6",
+                                        border_radius=10,
+                                    )
+                                    if category.is_default
+                                    else ft.Container()
+                                ),
+                            ],
+                            spacing=10,
                         ),
                         ft.Container(
                             height=200,
@@ -259,8 +350,10 @@ class CategoriesView(BaseView):
                     "Cerrar",
                     on_click=save_and_close,
                 ),
+                # ✅ NUEVO: Botón de restaurar (solo si es categoría default)
+                restore_button if restore_button else ft.Container(),
             ],
-            actions_alignment=ft.MainAxisAlignment.END,
+            actions_alignment=ft.MainAxisAlignment.SPACE_BETWEEN if restore_button else ft.MainAxisAlignment.END,
         )
         
         self.show_dialog(dialog)

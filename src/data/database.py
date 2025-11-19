@@ -33,8 +33,10 @@ class DatabaseManager:
         
         # ✅ NUEVO: Inicializar palabras clave después de categorías
         self._initialize_default_keywords()
-        
+    
         print("✅ Base de datos inicializada con categorías y palabras clave")
+        
+        
 
     def _initialize_default_categories(self):
         """Crea categorías predeterminadas si no existen"""
@@ -314,6 +316,8 @@ class DatabaseManager:
             print(f"⚠️ Error al inicializar palabras clave: {e}")
             self.session.rollback()
 
+    
+    
     def restore_default_keywords(self, category_id: Optional[int] = None) -> Dict:
         """
         ✅ NUEVO: Restaura palabras clave predeterminadas
@@ -517,145 +521,6 @@ class DatabaseManager:
                 "message": f"Error: {str(e)}"
             }
 
-
-    def load_keywords_to_categorizer(self, categorizer):
-        """
-        ✅ NUEVO: Carga las palabras clave desde la BD al categorizador
-        
-        Args:
-            categorizer: Instancia de TransactionCategorizer
-            
-        Returns:
-            bool: True si se cargó correctamente
-        """
-        try:
-            # Obtener todas las categorías
-            all_categories = self.session.query(Category).all()
-            
-            for category in all_categories:
-                # Obtener keywords de la categoría
-                keywords = category.get_keywords_list()
-                
-                if keywords:
-                    # Determinar tipo de transacción
-                    transaction_type = category.category_type
-                    
-                    # Establecer keywords en el categorizador
-                    categorizer.set_keywords(
-                        category.name,
-                        keywords,
-                        transaction_type
-                    )
-            
-            return True
-            
-        except Exception as e:
-            print(f"❌ Error al cargar keywords al categorizador: {e}")
-            return False
-
-
-    def sync_keywords_from_categorizer(self, categorizer, category_name: str, 
-                                    transaction_type: str = "expense"):
-        """
-        ✅ NUEVO: Sincroniza keywords desde el categorizador a la BD
-        
-        Args:
-            categorizer: Instancia de TransactionCategorizer
-            category_name: Nombre de la categoría
-            transaction_type: Tipo de transacción
-            
-        Returns:
-            bool: True si se sincronizó correctamente
-        """
-        try:
-            # Buscar la categoría en la BD
-            category = self.session.query(Category).filter(
-                Category.name == category_name,
-                Category.category_type == transaction_type
-            ).first()
-            
-            if not category:
-                print(f"⚠️ Categoría '{category_name}' no encontrada")
-                return False
-            
-            # Obtener keywords del categorizador
-            keywords = categorizer.get_keywords_for_category(
-                category_name, 
-                transaction_type
-            )
-            
-            # Actualizar en la BD
-            category.set_keywords_list(keywords)
-            self.session.commit()
-            
-            return True
-            
-        except Exception as e:
-            print(f"❌ Error al sincronizar keywords: {e}")
-            self.session.rollback()
-            return False
-
-
-    def update_category_keywords(self, category_id: int, keywords: List[str]) -> bool:
-        """
-        ✅ NUEVO: Actualiza las palabras clave de una categoría
-        
-        Args:
-            category_id: ID de la categoría
-            keywords: Lista de palabras clave
-            
-        Returns:
-            bool: True si se actualizó correctamente
-        """
-        try:
-            category = self.get_category_by_id(category_id)
-            
-            if not category:
-                return False
-            
-            category.set_keywords_list(keywords)
-            self.session.commit()
-            return True
-            
-        except Exception as e:
-            print(f"❌ Error al actualizar keywords: {e}")
-            self.session.rollback()
-            return False
-
-
-    def get_categories_with_keywords(self, transaction_type: Optional[str] = None) -> Dict:
-        """
-        ✅ NUEVO: Obtiene categorías con sus palabras clave en formato dict
-        
-        Args:
-            transaction_type: "expense" o "income" (opcional)
-            
-        Returns:
-            Dict: {category_id: {"name": str, "keywords": List[str]}}
-        """
-        try:
-            query = self.session.query(Category)
-            
-            if transaction_type:
-                query = query.filter(Category.category_type == transaction_type)
-            
-            categories = query.all()
-            
-            result = {}
-            for cat in categories:
-                result[cat.id] = {
-                    "name": cat.name,
-                    "keywords": cat.get_keywords_list(),
-                    "type": cat.category_type
-                }
-            
-            return result
-            
-        except Exception as e:
-            print(f"❌ Error al obtener categorías con keywords: {e}")
-            return {}
-    
-    
     
     
     
@@ -713,7 +578,6 @@ class DatabaseManager:
         except Exception as e:
             print(f"❌ Error al resetear base de datos: {e}")
             self.session.rollback()
-            return False
 
     def get_database_stats(self) -> Dict:
         """Obtiene estadísticas de la base de datos"""

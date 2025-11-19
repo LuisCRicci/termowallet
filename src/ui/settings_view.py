@@ -540,7 +540,7 @@ class SettingsView(BaseView):
                 [
                     ft.Icon(ft.Icons.WARNING_AMBER, size=24, color="#f97316"),
                     ft.Text(
-                        "⚠️ Estas acciones son irreversibles. Asegúrate de tener respaldos si es necesario.",
+                        "Estas acciones son irreversibles. Asegúrate de tener respaldos si es necesario.",
                         size=12,
                         color=ft.Colors.GREY_700,
                         expand=True,

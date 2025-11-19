@@ -826,6 +826,9 @@ class DatabaseManager:
 
     def get_monthly_summary(self, year: int, month: int) -> Dict:
         """Obtiene resumen financiero del mes"""
+        # ✅ IMPORTAR la función helper
+        from src.utils.helpers import get_month_name
+        
         # Ingresos totales
         total_income = (
             self.session.query(func.sum(Transaction.amount))
@@ -857,7 +860,8 @@ class DatabaseManager:
         return {
             "year": year,
             "month": month,
-            "month_name": datetime(year, month, 1).strftime("%B"),
+            # ✅ CORREGIDO: Usar get_month_name para español
+            "month_name": get_month_name(month),
             "total_income": total_income,
             "total_expenses": total_expenses,
             "savings": savings,
@@ -1406,6 +1410,9 @@ class DatabaseManager:
 
     def get_budget_history(self, months: int = 6) -> List[Dict]:
         """Obtiene el historial de presupuestos y su cumplimiento"""
+        # ✅ IMPORTAR la función helper al inicio del método
+        from src.utils.helpers import get_month_name
+        
         results = []
         current_date = datetime.now()
 
@@ -1420,7 +1427,8 @@ class DatabaseManager:
             status = self.get_budget_status(year, month)
             status["year"] = year
             status["month"] = month
-            status["month_name"] = datetime(year, month, 1).strftime("%B %Y")
+            # ✅ CORREGIDO: Usar get_month_name para español
+            status["month_name"] = f"{get_month_name(month)} {year}"
 
             results.append(status)
 

@@ -863,6 +863,7 @@ class BudgetSummaryCard(ft.Container):
 class BudgetHistoryTile(ft.Container):
     """
     Tile para mostrar un mes en el historial de presupuestos.
+    ✅ CORREGIDO: Detecta correctamente si hay actividad en el mes
     
     Args:
         budget_history (Dict): Datos del presupuesto histórico
@@ -871,12 +872,19 @@ class BudgetHistoryTile(ft.Container):
     def __init__(self, budget_history: Dict):
         expense_progress = budget_history.get("expense_progress", 0)
         savings_progress = budget_history.get("savings_progress", 0)
+        actual_expenses = budget_history.get("actual_expenses", 0)
+        actual_income = budget_history.get("actual_income", 0)
         
-        # Determinar estado general
+        # ✅ CORREGIDO: Determinar estado general de forma más precisa
         if not budget_history.get("budget_exists"):
             status_icon = ft.Icons.HELP_OUTLINE
             status_color = ft.Colors.GREY_400
             status_text = "Sin presupuesto"
+        elif actual_expenses == 0 and actual_income == 0:
+            # No hay movimientos en ese mes
+            status_icon = ft.Icons.REMOVE_CIRCLE_OUTLINE
+            status_color = ft.Colors.GREY_400
+            status_text = "Sin actividad"
         elif expense_progress >= 100:
             status_icon = ft.Icons.CANCEL
             status_color = "#ef4444"

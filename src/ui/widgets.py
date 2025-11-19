@@ -955,3 +955,144 @@ class BudgetHistoryTile(ft.Container):
             margin=ft.margin.only(bottom=8),
             border=ft.border.all(1, ft.Colors.GREY_200),
         )
+        
+class EmojiPickerDialog(ft.AlertDialog):
+    def __init__(self, on_select):
+        super().__init__()
+        self.on_select = on_select
+
+        self.emoji_categories = {
+            "Comida": ["🍔","🍕","🍟","🌮","🍜","🥗","🍱","🍩","🍦","🍫"],
+            "Finanzas": ["💰","💵","💳","📈","📉","🏦","💲"],
+            "Transporte": ["🚗","🚕","🚌","🚙","🚲","✈️","🚆"],
+            "Casa": ["🏠","🏡","🛋️","💡","🚿","🧹"],
+            "Entretenimiento": ["🎮","🎧","📺","🎟️","🎲", "🎤"],
+        }
+
+        self.category_tabs = ft.Tabs(
+            tabs=[ft.Tab(text=cat) for cat in self.emoji_categories.keys()],
+            selected_index=0,
+            on_change=self.update_emojis,
+        )
+
+        self.emoji_grid = ft.GridView(
+            expand=True,
+            runs_count=6,
+            max_extent=60,
+            child_aspect_ratio=1,
+            spacing=5,
+            run_spacing=5,
+        )
+
+        self.content = ft.Container(
+            padding=20,
+            width=430,
+            height=420,
+            content=ft.Column(
+                [
+                    ft.Text("Selecciona un emoji", size=20, weight=ft.FontWeight.BOLD),
+                    ft.Divider(),
+                    self.category_tabs,
+                    ft.Container(height=10),
+                    self.emoji_grid,
+                ],
+                expand=True,
+            ),
+        )
+
+        self.update_emojis(None)
+
+    def update_emojis(self, e):
+        self.emoji_grid.controls.clear()
+        category = list(self.emoji_categories.keys())[self.category_tabs.selected_index]
+        for emoji in self.emoji_categories[category]:
+            self.emoji_grid.controls.append(
+                ft.TextButton(
+                    emoji,
+                    style=ft.ButtonStyle(
+                        shape=ft.RoundedRectangleBorder(radius=8),
+                        padding=10,
+                        bgcolor="white"
+                    ),
+                    on_click=lambda e, em=emoji: self.select_emoji(em),
+                )
+            )
+        self.update()
+
+    def select_emoji(self, emoji):
+        self.on_select(emoji)
+        self.open = False
+        self.update()
+        
+class ColorPickerDialog(ft.AlertDialog):
+    def __init__(self, initial="#3b82f6", on_select=None):
+        super().__init__()
+        self.on_select = on_select
+        self.selected = initial
+
+        self.colors = [
+            "#ef4444","#f97316","#f59e0b","#eab308","#84cc16",
+            "#22c55e","#10b981","#06b6d4","#0ea5e9","#3b82f6",
+            "#6366f1","#8b5cf6","#a855f7","#d946ef","#ec4899",
+            "#f43f5e","#6b7280","#374151","#000000","#ffffff",
+            "#fecaca","#fed7aa","#fde68a","#fef08a","#dcfce7",
+            "#bbf7d0","#99f6e4","#bfdbfe","#c7d2fe","#ddd6fe",
+            "#fae8ff","#fce7f3","#ffe4e6","#d1d5db","#e5e7eb",
+            "#f3f4f6","#e6e6e6","#b91c1c","#7c2d12","#92400e",
+            "#065f46","#0f766e","#0369a1"
+        ]
+
+        self.hex_input = ft.TextField(
+            label="Código HEX",
+            value=self.selected,
+            on_submit=self.validate_hex,
+            width=150
+        )
+
+        self.color_grid = ft.GridView(
+            runs_count=8,
+            max_extent=45,
+            spacing=5,
+            run_spacing=5,
+            child_aspect_ratio=1,
+        )
+
+        for c in self.colors:
+            self.color_grid.controls.append(
+                ft.Container(
+                    width=35,
+                    height=35,
+                    bgcolor=c,
+                    border_radius=50,
+                    on_click=lambda e, col=c: self.pick_color(col),
+                    border=ft.border.all(2, ft.Colors.BLACK if c==self.selected else ft.Colors.WHITE)
+                )
+            )
+
+        self.content = ft.Container(
+            width=420,
+            height=430,
+            padding=20,
+            content=ft.Column(
+                [
+                    ft.Text("Seleccionar color", size=20, weight=ft.FontWeight.BOLD),
+                    ft.Divider(),
+                    ft.Row([self.hex_input]),
+                    ft.Container(height=10),
+                    self.color_grid,
+                ],
+                expand=True
+            )
+        )
+
+    def pick_color(self, color):
+        self.selected = color
+        if self.on_select:
+            self.on_select(color)
+        self.open = False
+        self.update()
+
+    def validate_hex(self, e):
+        v = self.hex_input.value.strip()
+        if len(v) == 7 and v.startswith("#"):
+            self.pick_color(v)

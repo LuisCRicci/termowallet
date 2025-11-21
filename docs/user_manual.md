@@ -363,6 +363,38 @@ print(f"✅ {updated_count} categorías actualizadas...")
 
 ---
 
+
+
+## ⚕️ Teting 
+
+```bash
+export PYTHONPATH="${PYTHONPATH}:/home/gandalf/Projects/mobile/termowallet"
+```
+**Nota** : cambiar la ruta por la ruta configurada en tu equipo
+```bash
+python tests/run_test.py
+```
+
+si todo a salio bien veras el resumen del testing de la siguiente forma: 
+
+```bash
+
+=========================================================
+                       RESUMEN FINAL                        
+=========================================================
+
+Dependencias             : ✓ PASS
+Estructura               : ✓ PASS
+Base de Datos            : ✓ PASS
+Sistema Keywords         : ✓ PASS
+Tests Unitarios          : ✓ PASS
+Diagnóstico              : ✓ PASS
+Android Compatibility    : ✓ PASS
+
+🎉 ¡Todos los tests pasaron!
+La aplicación está lista para ejecutarse y compilar.
+```
+
 ## 🏁 Conclusión
 
 El sistema de keywords personalizado está completamente funcional con:
@@ -375,3 +407,5 @@ El sistema de keywords personalizado está completamente funcional con:
 ✅ **Código documentado y mantenible**
 
 ¡Todo listo para usar! 🎉
+
+

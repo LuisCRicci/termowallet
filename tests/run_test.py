@@ -89,7 +89,7 @@ def test_database_connection():
     print_header("3. Probando Base de Datos")
 
     try:
-        from src.data.database import DatabaseManager
+        from src.data.database  import DatabaseManager
 
         # Crear base de datos de prueba
         db = DatabaseManager("test_connection.db")

@@ -316,6 +316,44 @@ class DatabaseManager:
             print(f"⚠️ Error al inicializar palabras clave: {e}")
             self.session.rollback()
 
+
+
+
+    def load_keywords_to_categorizer(self, categorizer):
+        """
+        ✅ Carga las palabras clave desde la BD al categorizador
+        
+        Args:
+            categorizer: Instancia de TransactionCategorizer
+            
+        Returns:
+            bool: True si se cargó correctamente
+        """
+        try:
+            # Obtener todas las categorías
+            all_categories = self.session.query(Category).all()
+            
+            for category in all_categories:
+                # Obtener keywords de la categoría
+                keywords = category.get_keywords_list()
+                
+                if keywords:
+                    # Determinar tipo de transacción
+                    transaction_type = category.category_type
+                    
+                    # Establecer keywords en el categorizador
+                    categorizer.set_keywords(
+                        category.name,
+                        keywords,
+                        transaction_type
+                    )
+            
+            return True
+            
+        except Exception as e:
+            print(f"❌ Error al cargar keywords al categorizador: {e}")
+            return False
+    
     
     
     """

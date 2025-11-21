@@ -121,13 +121,35 @@ class TestTransactionProcessor(unittest.TestCase):
         print(f"✅ Tipos normalizados: {list(tipos)}")
 
     def test_categorize_transactions_with_db_keywords(self):
-        """✅ NUEVO: Categoriza usando keywords de la BD"""
+        """✅ CORREGIDO: Categoriza usando keywords de la BD"""
         self.processor.load_file(self.test_file)
         self.processor.validate_columns()
         self.processor.clean_data()
         
-        # Categorizar usando el nuevo sistema (pasa db_manager)
-        success = self.processor.categorize_transactions(self.db)
+        # ✅ CORRECCIÓN: Crear mapas de categorías correctamente
+        categories_expense = self.db.get_all_categories("expense")
+        categories_income = self.db.get_all_categories("income")
+        
+        # Crear mapas {id: name}
+        categories_map_expense = {cat.id: cat.name for cat in categories_expense}
+        categories_map_income = {cat.id: cat.name for cat in categories_income}
+        
+        # Cargar keywords desde BD al categorizador
+        for cat in categories_expense:
+            keywords = cat.get_keywords_list()
+            if keywords:
+                self.processor.categorizer.set_keywords(cat.name, keywords, "expense")
+        
+        for cat in categories_income:
+            keywords = cat.get_keywords_list()
+            if keywords:
+                self.processor.categorizer.set_keywords(cat.name, keywords, "income")
+        
+        # Categorizar con los mapas correctos
+        success = self.processor.categorize_transactions(
+            categories_map_expense, 
+            categories_map_income
+        )
         
         self.assertTrue(success, "Categorización debe ser exitosa")
         self.assertIn("categoria_id", self.processor.df.columns)
@@ -145,24 +167,45 @@ class TestTransactionProcessor(unittest.TestCase):
         wong_row = self.processor.df[self.processor.df["descripcion"].str.contains("Wong", case=False)]
         if not wong_row.empty:
             self.assertEqual(wong_row.iloc[0]["categoria_id"], alimentacion.id,
-                           "Wong debe categorizarse como Alimentación")
+                        "Wong debe categorizarse como Alimentación")
         
         # "Gasolina" debe ir a Transporte
         gasolina_row = self.processor.df[self.processor.df["descripcion"].str.contains("Gasolina", case=False)]
         if not gasolina_row.empty:
             self.assertEqual(gasolina_row.iloc[0]["categoria_id"], transporte.id,
-                           "Gasolina debe categorizarse como Transporte")
+                        "Gasolina debe categorizarse como Transporte")
         
         print(f"✅ Categorización con keywords de BD exitosa")
 
     def test_categorize_with_income_and_expense(self):
-        """✅ NUEVO: Categoriza gastos e ingresos correctamente"""
+        """✅ CORREGIDO: Categoriza gastos e ingresos correctamente"""
         self.processor.load_file(self.test_file_with_type)
         self.processor.validate_columns()
         self.processor.clean_data()
         
+        # ✅ CORRECCIÓN: Crear mapas y cargar keywords
+        categories_expense = self.db.get_all_categories("expense")
+        categories_income = self.db.get_all_categories("income")
+        
+        categories_map_expense = {cat.id: cat.name for cat in categories_expense}
+        categories_map_income = {cat.id: cat.name for cat in categories_income}
+        
+        # Cargar keywords
+        for cat in categories_expense:
+            keywords = cat.get_keywords_list()
+            if keywords:
+                self.processor.categorizer.set_keywords(cat.name, keywords, "expense")
+        
+        for cat in categories_income:
+            keywords = cat.get_keywords_list()
+            if keywords:
+                self.processor.categorizer.set_keywords(cat.name, keywords, "income")
+        
         # Categorizar
-        success = self.processor.categorize_transactions(self.db)
+        success = self.processor.categorize_transactions(
+            categories_map_expense,
+            categories_map_income
+        )
         self.assertTrue(success)
         
         # Verificar que ingresos usan categorías de ingreso
@@ -171,9 +214,10 @@ class TestTransactionProcessor(unittest.TestCase):
         for idx, row in income_rows.iterrows():
             category = self.db.get_category_by_id(row["categoria_id"])
             self.assertEqual(category.category_type, "income",
-                           "Ingresos deben usar categorías de ingreso")
+                        "Ingresos deben usar categorías de ingreso")
         
         print(f"✅ Ingresos y gastos categorizados correctamente")
+
 
     def test_get_summary(self):
         """Test: Obtiene resumen de datos"""
@@ -203,11 +247,32 @@ class TestTransactionProcessor(unittest.TestCase):
               f"Total: S/ {summary['total_amount']:.2f}")
 
     def test_get_processed_data(self):
-        """Test: Obtiene datos procesados listos para BD"""
+        """✅ CORREGIDO: Obtiene datos procesados listos para BD"""
         self.processor.load_file(self.test_file)
         self.processor.validate_columns()
         self.processor.clean_data()
-        self.processor.categorize_transactions(self.db)
+        
+        # ✅ CORRECCIÓN
+        categories_expense = self.db.get_all_categories("expense")
+        categories_income = self.db.get_all_categories("income")
+        
+        categories_map_expense = {cat.id: cat.name for cat in categories_expense}
+        categories_map_income = {cat.id: cat.name for cat in categories_income}
+        
+        for cat in categories_expense:
+            keywords = cat.get_keywords_list()
+            if keywords:
+                self.processor.categorizer.set_keywords(cat.name, keywords, "expense")
+        
+        for cat in categories_income:
+            keywords = cat.get_keywords_list()
+            if keywords:
+                self.processor.categorizer.set_keywords(cat.name, keywords, "income")
+        
+        self.processor.categorize_transactions(
+            categories_map_expense,
+            categories_map_income
+        )
         
         data = self.processor.get_processed_data()
         
@@ -230,7 +295,7 @@ class TestTransactionProcessor(unittest.TestCase):
         print(f"✅ {len(data)} transacciones listas para insertar")
 
     def test_full_import_workflow(self):
-        """✅ NUEVO: Prueba flujo completo de importación"""
+        """✅ CORREGIDO: Prueba flujo completo de importación"""
         # 1. Cargar
         success, message = self.processor.load_file(self.test_file_with_type)
         self.assertTrue(success)
@@ -243,8 +308,27 @@ class TestTransactionProcessor(unittest.TestCase):
         success, message = self.processor.clean_data()
         self.assertTrue(success)
         
-        # 4. Categorizar con keywords de BD
-        success = self.processor.categorize_transactions(self.db)
+        # 4. ✅ CORRECCIÓN: Categorizar con keywords de BD
+        categories_expense = self.db.get_all_categories("expense")
+        categories_income = self.db.get_all_categories("income")
+        
+        categories_map_expense = {cat.id: cat.name for cat in categories_expense}
+        categories_map_income = {cat.id: cat.name for cat in categories_income}
+        
+        for cat in categories_expense:
+            keywords = cat.get_keywords_list()
+            if keywords:
+                self.processor.categorizer.set_keywords(cat.name, keywords, "expense")
+        
+        for cat in categories_income:
+            keywords = cat.get_keywords_list()
+            if keywords:
+                self.processor.categorizer.set_keywords(cat.name, keywords, "income")
+        
+        success = self.processor.categorize_transactions(
+            categories_map_expense,
+            categories_map_income
+        )
         self.assertTrue(success)
         
         # 5. Obtener datos procesados
@@ -269,7 +353,7 @@ class TestTransactionProcessor(unittest.TestCase):
         print(f"✅ Flujo completo: {len(expenses)} gastos + {len(incomes)} ingresos importados")
 
     def test_keyword_based_categorization(self):
-        """✅ NUEVO: Verifica categorización basada en keywords específicas"""
+        """✅ CORREGIDO: Verifica categorización basada en keywords específicas"""
         # Crear CSV con palabras clave específicas
         test_data = pd.DataFrame({
             "fecha": ["2025-11-01", "2025-11-02", "2025-11-03", "2025-11-04"],
@@ -285,7 +369,23 @@ class TestTransactionProcessor(unittest.TestCase):
             self.processor.load_file(test_file)
             self.processor.validate_columns()
             self.processor.clean_data()
-            self.processor.categorize_transactions(self.db)
+            
+            # ✅ CORRECCIÓN
+            categories_expense = self.db.get_all_categories("expense")
+            categories_income = self.db.get_all_categories("income")
+            
+            categories_map_expense = {cat.id: cat.name for cat in categories_expense}
+            categories_map_income = {cat.id: cat.name for cat in categories_income}
+            
+            for cat in categories_expense:
+                keywords = cat.get_keywords_list()
+                if keywords:
+                    self.processor.categorizer.set_keywords(cat.name, keywords, "expense")
+            
+            self.processor.categorize_transactions(
+                categories_map_expense,
+                categories_map_income
+            )
             
             # Verificar categorizaciones específicas
             entretenimiento = self.db.get_category_by_name("Entretenimiento", "expense")
@@ -316,7 +416,7 @@ class TestTransactionProcessor(unittest.TestCase):
         finally:
             if os.path.exists(test_file):
                 os.remove(test_file)
-
+            
     def test_preview_data(self):
         """Test: Vista previa de datos"""
         self.processor.load_file(self.test_file)

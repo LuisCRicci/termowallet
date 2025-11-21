@@ -15,6 +15,36 @@ class Config:
     APP_VERSION = "1.0.0"
     APP_ORG = "com.termowallet.app"
 
+    # ✅ RUTAS ADAPTATIVAS PARA ANDROID
+    @classmethod
+    def get_data_dir(cls):
+        """Obtiene el directorio de datos según la plataforma"""
+        import sys
+        if hasattr(sys, 'getandroidapilevel'):
+            # Android: usar directorio de datos de la app
+            import os
+            return os.path.join(
+                os.path.expanduser("~"), 
+                ".termowallet"
+            )
+        else:
+            # Desktop: usar directorio del proyecto
+            import os
+            BASE_DIR = os.path.dirname(
+                os.path.dirname(
+                    os.path.dirname(__file__)
+                )
+            )
+            return os.path.join(BASE_DIR, "data")
+    
+    @classmethod
+    def get_db_path(cls):
+        """Retorna la ruta completa de la base de datos"""
+        import os
+        data_dir = cls.get_data_dir()
+        os.makedirs(data_dir, exist_ok=True)
+        return os.path.join(data_dir, "termowallet.db")
+
     # Base de datos
     
     BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))

@@ -216,6 +216,9 @@ class ExpenseTrackerApp:
         self.views[view_name] = view
         return view
 
+    # ========== ACTUALIZACIÓN PARA main.py ==========
+    # Reemplazar el método load_view() completo
+
     def load_view(self, view_name: str):
         """Carga una vista específica"""
         print(f"\n{'='*60}")
@@ -239,6 +242,15 @@ class ExpenseTrackerApp:
                 on_click=view.show_add_category_dialog,
                 tooltip="Añadir categoría",
                 bgcolor=Config.PRIMARY_COLOR,
+            )
+        # ✅ NUEVO: FAB para vista de gráficos
+        elif view_name == "charts":
+            view = self.get_or_create_view(view_name)
+            self.page.floating_action_button = ft.FloatingActionButton(
+                icon=ft.Icons.DOWNLOAD,
+                tooltip="Generar Reporte",
+                on_click=view.show_report_dialog,
+                bgcolor="#667eea",
             )
         else:
             self.page.floating_action_button = None

@@ -1,6 +1,8 @@
 """
-Vista de gráficos y análisis
+Vista de gráficos y análisis - CON GENERACIÓN DE REPORTES
 Archivo: src/ui/charts_view.py
+
+✅ AGREGADO: Botón flotante para generar reportes en Excel/CSV
 """
 
 import flet as ft
@@ -8,9 +10,11 @@ from .base_view import BaseView
 from .widgets import MonthSelector
 from src.utils.config import Config
 from src.utils.helpers import get_month_name
+from src.business.report_generator import ReportGenerator  # ✅ NUEVO
+
 
 class ChartsView(BaseView):
-    """Vista de gráficos y análisis"""
+    """Vista de gráficos y análisis con generación de reportes"""
 
     def __init__(self, page: ft.Page, db_manager, show_snackbar_callback,
                  current_month: int, current_year: int,
@@ -19,6 +23,7 @@ class ChartsView(BaseView):
         self.current_month = current_month
         self.current_year = current_year
         self.on_month_change = on_month_change
+        self.report_generator = ReportGenerator(db_manager)  # ✅ NUEVO
 
     def previous_month(self, e):
         if self.current_month == 1:
@@ -35,6 +40,166 @@ class ChartsView(BaseView):
         else:
             self.current_month += 1
         self.on_month_change(self.current_month, self.current_year)
+
+    # ✅ NUEVO: Método para mostrar diálogo de generación de reportes
+    def show_report_dialog(self, e):
+        """Muestra diálogo para seleccionar tipo de reporte"""
+        report_type = ft.RadioGroup(
+            value="monthly",
+            content=ft.Column([
+                ft.Radio(value="monthly", label="Reporte Mensual (mes actual)"),
+                ft.Radio(value="annual", label="Reporte Anual (año actual)"),
+            ])
+        )
+
+        format_type = ft.RadioGroup(
+            value="xlsx",
+            content=ft.Column([
+                ft.Radio(value="xlsx", label="📊 Excel (.xlsx) - Recomendado"),
+                ft.Radio(value="csv", label="📄 CSV (.csv) - Compatible con todo"),
+            ])
+        )
+
+        def generate_report(e):
+            self.close_dialog()
+            self.show_loading("Generando reporte...")
+
+            try:
+                if report_type.value == "monthly":
+                    result = self.report_generator.generate_monthly_report(
+                        year=self.current_year,
+                        month=self.current_month,
+                        format=format_type.value
+                    )
+                else:  # annual
+                    result = self.report_generator.generate_annual_report(
+                        year=self.current_year,
+                        format=format_type.value
+                    )
+
+                self.close_dialog()  # Cerrar loading
+
+                if result["success"]:
+                    self.show_success_dialog(result["filepath"])
+                else:
+                    self.show_snackbar(result["message"], error=True)
+
+            except Exception as ex:
+                self.close_dialog()
+                self.show_snackbar(f"Error al generar reporte: {str(ex)}", error=True)
+
+        dialog = ft.AlertDialog(
+            title=ft.Row([
+                ft.Icon(ft.Icons.DESCRIPTION, color="#667eea", size=28),
+                ft.Text("Generar Reporte", size=20, weight=ft.FontWeight.BOLD),
+            ], spacing=10),
+            content=ft.Container(
+                content=ft.Column([
+                    ft.Text("Tipo de Reporte", size=16, weight=ft.FontWeight.BOLD),
+                    report_type,
+                    ft.Divider(height=20),
+                    ft.Text("Formato de Archivo", size=16, weight=ft.FontWeight.BOLD),
+                    format_type,
+                    ft.Container(
+                        content=ft.Column([
+                            ft.Text(
+                                "💡 Tip: Los reportes se guardan en tu carpeta de Descargas",
+                                size=12,
+                                color=ft.Colors.BLUE_700,
+                            ),
+                            ft.Text(
+                                "• Excel: Incluye múltiples hojas (resumen, transacciones, categorías)",
+                                size=11,
+                                color=ft.Colors.GREY_600,
+                            ),
+                            ft.Text(
+                                "• CSV: Archivos separados para cada sección",
+                                size=11,
+                                color=ft.Colors.GREY_600,
+                            ),
+                        ], spacing=5),
+                        padding=10,
+                        bgcolor=ft.Colors.BLUE_50,
+                        border_radius=8,
+                        margin=ft.margin.only(top=10),
+                    ),
+                ], spacing=10, tight=True),
+                width=450,
+            ),
+            actions=[
+                ft.TextButton("Cancelar", on_click=lambda _: self.close_dialog()),
+                ft.ElevatedButton(
+                    "Generar",
+                    icon=ft.Icons.DOWNLOAD,
+                    on_click=generate_report,
+                    style=ft.ButtonStyle(
+                        bgcolor="#667eea",
+                        color=ft.Colors.WHITE,
+                    ),
+                ),
+            ],
+        )
+
+        self.show_dialog(dialog)
+
+    # ✅ NUEVO: Diálogo de éxito con ruta del archivo
+    def show_success_dialog(self, filepath: str):
+        """Muestra diálogo de éxito con ubicación del archivo"""
+        import os
+
+        dialog = ft.AlertDialog(
+            title=ft.Row([
+                ft.Icon(ft.Icons.CHECK_CIRCLE, color="#22c55e", size=32),
+                ft.Text("¡Reporte Generado!", size=20, weight=ft.FontWeight.BOLD),
+            ], spacing=10),
+            content=ft.Container(
+                content=ft.Column([
+                    ft.Text(
+                        "El reporte se ha generado exitosamente:",
+                        size=14,
+                    ),
+                    ft.Container(
+                        content=ft.Column([
+                            ft.Text(
+                                "📁 Ubicación:",
+                                size=13,
+                                weight=ft.FontWeight.BOLD,
+                                color=ft.Colors.GREY_700,
+                            ),
+                            ft.Text(
+                                filepath,
+                                size=12,
+                                color=ft.Colors.BLUE_700,
+                                selectable=True,
+                            ),
+                        ], spacing=5),
+                        padding=15,
+                        bgcolor=ft.Colors.GREY_50,
+                        border_radius=8,
+                        margin=ft.margin.only(top=10),
+                    ),
+                    ft.Text(
+                        "✅ Puedes abrir el archivo desde tu aplicación de hojas de cálculo favorita",
+                        size=12,
+                        color=ft.Colors.GREY_600,
+                        italic=True,
+                    ),
+                ], spacing=10, tight=True),
+                width=500,
+            ),
+            actions=[
+                ft.ElevatedButton(
+                    "Entendido",
+                    on_click=lambda _: self.close_dialog(),
+                    style=ft.ButtonStyle(
+                        bgcolor="#22c55e",
+                        color=ft.Colors.WHITE,
+                    ),
+                ),
+            ],
+        )
+
+        self.show_dialog(dialog)
 
     def _create_category_chart(self, expenses_data: list):
         """Crea gráfico de gastos por categoría"""
@@ -246,6 +411,16 @@ class ChartsView(BaseView):
         if monthly_trend:
             trend_chart = self._create_trend_chart(monthly_trend)
             charts.append(trend_chart)
+
+        # ✅ NUEVO: Configurar FAB en la página
+        # Esto se hace en main.py al cargar la vista
+        # Pero podemos exponerlo como atributo
+        self.fab_config = {
+            "icon": ft.Icons.DOWNLOAD,
+            "tooltip": "Generar Reporte",
+            "on_click": self.show_report_dialog,
+            "bgcolor": "#667eea",
+        }
 
         return ft.Column(
             [month_selector, ft.Container(height=10), *charts],

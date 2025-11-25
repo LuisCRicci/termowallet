@@ -1,0 +1,10 @@
+name: termowallet
+description: Aplicación de gestión de gastos personales
+version: 1.0.0
+
+flutter:
+  # Configuración del icono de la aplicación
+  icons:
+    image_path: "assets/icon.png"
+    adaptive_icon_foreground: "assets/icon_foreground.png"
+    adaptive_icon_background: "#FFFFFF"  # Color de fondo para íconos adaptativos

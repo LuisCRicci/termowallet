@@ -1,0 +1,2 @@
+/home/gandalf/Projects/mobile/termowallet/build/flutter/android/app/.cxx/RelWithDebInfo/3l101y6t/armeabi-v7a/CMakeFiles/edit_cache.dir
+/home/gandalf/Projects/mobile/termowallet/build/flutter/android/app/.cxx/RelWithDebInfo/3l101y6t/armeabi-v7a/CMakeFiles/rebuild_cache.dir

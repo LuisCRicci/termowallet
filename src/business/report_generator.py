@@ -1,11 +1,9 @@
 """
-Generador de Reportes en Excel y CSV
+Generador de Reportes en Excel y CSV - SIN PANDAS
 Archivo: src/business/report_generator.py
-
-Este módulo genera reportes detallados de transacciones en formato Excel y CSV
 """
 
-import pandas as pd
+import csv
 from datetime import datetime
 from typing import Dict, List, Optional
 import os
@@ -15,12 +13,6 @@ class ReportGenerator:
     """Generador de reportes financieros en Excel y CSV"""
 
     def __init__(self, db_manager):
-        """
-        Inicializa el generador de reportes
-        
-        Args:
-            db_manager: Instancia de DatabaseManager
-        """
         self.db = db_manager
 
     def generate_monthly_report(
@@ -32,15 +24,6 @@ class ReportGenerator:
     ) -> Dict:
         """
         Genera un reporte mensual completo
-        
-        Args:
-            year: Año del reporte
-            month: Mes del reporte
-            format: "xlsx" o "csv"
-            output_dir: Directorio de salida (None = Downloads o directorio actual)
-            
-        Returns:
-            Dict con: {"success": bool, "filepath": str, "message": str}
         """
         try:
             # Obtener datos
@@ -69,52 +52,39 @@ class ReportGenerator:
                     "Notas": t.notes or "",
                 })
 
-            df_transactions = pd.DataFrame(transactions_data)
-
             # Preparar resumen
-            summary_data = {
-                "Concepto": [
-                    "Total Ingresos",
-                    "Total Gastos",
-                    "Balance",
-                    "Tasa de Ahorro (%)",
-                    "N° Transacciones"
-                ],
-                "Valor": [
-                    summary["total_income"],
-                    summary["total_expenses"],
-                    summary["savings"],
-                    summary["savings_rate"],
-                    summary["transaction_count"]
-                ]
-            }
-            df_summary = pd.DataFrame(summary_data)
+            summary_data = [
+                {"Concepto": "Total Ingresos", "Valor": summary["total_income"]},
+                {"Concepto": "Total Gastos", "Valor": summary["total_expenses"]},
+                {"Concepto": "Balance", "Valor": summary["savings"]},
+                {"Concepto": "Tasa de Ahorro (%)", "Valor": summary["savings_rate"]},
+                {"Concepto": "N° Transacciones", "Valor": summary["transaction_count"]}
+            ]
 
             # Preparar gastos por categoría
             expenses_data = []
-            for cat in expenses_by_cat:
-                percentage = (cat["total"] / summary["total_expenses"] * 100) if summary["total_expenses"] > 0 else 0
-                expenses_data.append({
-                    "Categoría": cat["category"],
-                    "Total": cat["total"],
-                    "Porcentaje (%)": round(percentage, 2)
-                })
-            df_expenses = pd.DataFrame(expenses_data) if expenses_data else pd.DataFrame()
+            if summary["total_expenses"] > 0:
+                for cat in expenses_by_cat:
+                    percentage = (cat["total"] / summary["total_expenses"] * 100)
+                    expenses_data.append({
+                        "Categoría": cat["category"],
+                        "Total": cat["total"],
+                        "Porcentaje (%)": round(percentage, 2)
+                    })
 
             # Preparar ingresos por categoría
             income_data = []
-            for cat in income_by_cat:
-                percentage = (cat["total"] / summary["total_income"] * 100) if summary["total_income"] > 0 else 0
-                income_data.append({
-                    "Categoría": cat["category"],
-                    "Total": cat["total"],
-                    "Porcentaje (%)": round(percentage, 2)
-                })
-            df_income = pd.DataFrame(income_data) if income_data else pd.DataFrame()
+            if summary["total_income"] > 0:
+                for cat in income_by_cat:
+                    percentage = (cat["total"] / summary["total_income"] * 100)
+                    income_data.append({
+                        "Categoría": cat["category"],
+                        "Total": cat["total"],
+                        "Porcentaje (%)": round(percentage, 2)
+                    })
 
             # Determinar directorio de salida
             if output_dir is None:
-                # Intentar usar Downloads, sino usar directorio actual
                 output_dir = os.path.expanduser("~/Downloads")
                 if not os.path.exists(output_dir):
                     output_dir = os.getcwd()
@@ -128,23 +98,13 @@ class ReportGenerator:
 
             if format.lower() == "xlsx":
                 return self._save_excel(
-                    output_dir,
-                    filename,
-                    df_transactions,
-                    df_summary,
-                    df_expenses,
-                    df_income,
-                    year,
-                    month
+                    output_dir, filename, transactions_data,
+                    summary_data, expenses_data, income_data, year, month
                 )
-            else:  # CSV
+            else:
                 return self._save_csv(
-                    output_dir,
-                    filename,
-                    df_transactions,
-                    df_summary,
-                    df_expenses,
-                    df_income
+                    output_dir, filename, transactions_data,
+                    summary_data, expenses_data, income_data
                 )
 
         except Exception as e:
@@ -155,56 +115,52 @@ class ReportGenerator:
             }
 
     def _save_excel(
-        self,
-        output_dir: str,
-        filename: str,
-        df_trans: pd.DataFrame,
-        df_summary: pd.DataFrame,
-        df_expenses: pd.DataFrame,
-        df_income: pd.DataFrame,
-        year: int,
-        month: int
+        self, output_dir: str, filename: str,
+        trans_data: List[Dict], summary_data: List[Dict],
+        expenses_data: List[Dict], income_data: List[Dict],
+        year: int, month: int
     ) -> Dict:
-        """Guarda el reporte en formato Excel con múltiples hojas"""
+        """Guarda el reporte en formato Excel"""
         try:
+            import openpyxl
+            from openpyxl.styles import Font, Alignment, PatternFill
+            
             filepath = os.path.join(output_dir, f"{filename}.xlsx")
-
-            with pd.ExcelWriter(filepath, engine='openpyxl') as writer:
-                # Hoja 1: Resumen
-                df_summary.to_excel(writer, sheet_name='Resumen', index=False)
-
-                # Hoja 2: Todas las transacciones
-                df_trans.to_excel(writer, sheet_name='Transacciones', index=False)
-
-                # Hoja 3: Gastos por categoría
-                if not df_expenses.empty:
-                    df_expenses.to_excel(writer, sheet_name='Gastos por Categoría', index=False)
-
-                # Hoja 4: Ingresos por categoría
-                if not df_income.empty:
-                    df_income.to_excel(writer, sheet_name='Ingresos por Categoría', index=False)
-
-                # Ajustar anchos de columna
-                for sheet_name in writer.sheets:
-                    worksheet = writer.sheets[sheet_name]
-                    for column in worksheet.columns:
-                        max_length = 0
-                        column_letter = column[0].column_letter
-                        for cell in column:
-                            try:
-                                if len(str(cell.value)) > max_length:
-                                    max_length = len(str(cell.value))
-                            except:
-                                pass
-                        adjusted_width = min(max_length + 2, 50)
-                        worksheet.column_dimensions[column_letter].width = adjusted_width
-
+            wb = openpyxl.Workbook()
+            
+            # Hoja 1: Resumen
+            ws_summary = wb.active
+            ws_summary.title = "Resumen"
+            self._write_data_to_sheet(ws_summary, summary_data)
+            
+            # Hoja 2: Transacciones
+            ws_trans = wb.create_sheet("Transacciones")
+            self._write_data_to_sheet(ws_trans, trans_data)
+            
+            # Hoja 3: Gastos por categoría
+            if expenses_data:
+                ws_exp = wb.create_sheet("Gastos por Categoría")
+                self._write_data_to_sheet(ws_exp, expenses_data)
+            
+            # Hoja 4: Ingresos por categoría
+            if income_data:
+                ws_inc = wb.create_sheet("Ingresos por Categoría")
+                self._write_data_to_sheet(ws_inc, income_data)
+            
+            wb.save(filepath)
+            
             return {
                 "success": True,
                 "filepath": filepath,
-                "message": f"Reporte Excel generado exitosamente"
+                "message": "Reporte Excel generado exitosamente"
             }
-
+            
+        except ImportError:
+            return {
+                "success": False,
+                "filepath": None,
+                "message": "openpyxl no disponible, use formato CSV"
+            }
         except Exception as e:
             return {
                 "success": False,
@@ -212,39 +168,73 @@ class ReportGenerator:
                 "message": f"Error al guardar Excel: {str(e)}"
             }
 
+    def _write_data_to_sheet(self, worksheet, data: List[Dict]):
+        """Escribe datos en una hoja de Excel"""
+        if not data:
+            return
+        
+        # Escribir encabezados
+        headers = list(data[0].keys())
+        for col_idx, header in enumerate(headers, start=1):
+            cell = worksheet.cell(row=1, column=col_idx)
+            cell.value = header
+            
+            # Estilo de encabezado (opcional)
+            try:
+                from openpyxl.styles import Font, PatternFill
+                cell.font = Font(bold=True)
+                cell.fill = PatternFill(start_color="CCCCCC", end_color="CCCCCC", fill_type="solid")
+            except:
+                pass
+        
+        # Escribir datos
+        for row_idx, row_data in enumerate(data, start=2):
+            for col_idx, header in enumerate(headers, start=1):
+                cell = worksheet.cell(row=row_idx, column=col_idx)
+                cell.value = row_data.get(header, "")
+        
+        # Ajustar ancho de columnas
+        for column in worksheet.columns:
+            max_length = 0
+            column_letter = column[0].column_letter
+            for cell in column:
+                try:
+                    if cell.value and len(str(cell.value)) > max_length:
+                        max_length = len(str(cell.value))
+                except:
+                    pass
+            adjusted_width = min(max_length + 2, 50)
+            worksheet.column_dimensions[column_letter].width = adjusted_width
+
     def _save_csv(
-        self,
-        output_dir: str,
-        filename: str,
-        df_trans: pd.DataFrame,
-        df_summary: pd.DataFrame,
-        df_expenses: pd.DataFrame,
-        df_income: pd.DataFrame
+        self, output_dir: str, filename: str,
+        trans_data: List[Dict], summary_data: List[Dict],
+        expenses_data: List[Dict], income_data: List[Dict]
     ) -> Dict:
-        """Guarda el reporte en formato CSV (archivo principal + archivos adicionales)"""
+        """Guarda el reporte en formato CSV"""
         try:
             # Archivo principal: transacciones
             main_filepath = os.path.join(output_dir, f"{filename}.csv")
-            df_trans.to_csv(main_filepath, index=False, encoding='utf-8-sig')
+            self._write_csv(main_filepath, trans_data)
 
             # Archivo de resumen
             summary_filepath = os.path.join(output_dir, f"{filename}_Resumen.csv")
-            df_summary.to_csv(summary_filepath, index=False, encoding='utf-8-sig')
+            self._write_csv(summary_filepath, summary_data)
 
             # Archivo de gastos
-            if not df_expenses.empty:
+            if expenses_data:
                 expenses_filepath = os.path.join(output_dir, f"{filename}_Gastos.csv")
-                df_expenses.to_csv(expenses_filepath, index=False, encoding='utf-8-sig')
+                self._write_csv(expenses_filepath, expenses_data)
 
             # Archivo de ingresos
-            if not df_income.empty:
+            if income_data:
                 income_filepath = os.path.join(output_dir, f"{filename}_Ingresos.csv")
-                df_income.to_csv(income_filepath, index=False, encoding='utf-8-sig')
+                self._write_csv(income_filepath, income_data)
 
             return {
                 "success": True,
                 "filepath": main_filepath,
-                "message": f"Reportes CSV generados exitosamente"
+                "message": "Reportes CSV generados exitosamente"
             }
 
         except Exception as e:
@@ -254,25 +244,24 @@ class ReportGenerator:
                 "message": f"Error al guardar CSV: {str(e)}"
             }
 
+    def _write_csv(self, filepath: str, data: List[Dict]):
+        """Escribe datos a un archivo CSV"""
+        if not data:
+            return
+        
+        with open(filepath, 'w', newline='', encoding='utf-8-sig') as f:
+            writer = csv.DictWriter(f, fieldnames=data[0].keys())
+            writer.writeheader()
+            writer.writerows(data)
+
     def generate_annual_report(
-        self,
-        year: int,
-        format: str = "xlsx",
+        self, year: int, format: str = "xlsx",
         output_dir: Optional[str] = None
     ) -> Dict:
         """
         Genera un reporte anual completo
-        
-        Args:
-            year: Año del reporte
-            format: "xlsx" o "csv"
-            output_dir: Directorio de salida
-            
-        Returns:
-            Dict con resultado
         """
         try:
-            # Obtener todas las transacciones del año
             all_transactions = []
             monthly_summaries = []
 
@@ -307,31 +296,19 @@ class ReportGenerator:
                     "message": f"No hay transacciones en {year}"
                 }
 
-            df_transactions = pd.DataFrame(all_transactions)
-            df_monthly = pd.DataFrame(monthly_summaries)
-
             # Calcular totales anuales
-            total_income = df_transactions[df_transactions["Tipo"] == "Ingreso"]["Monto"].sum()
-            total_expenses = df_transactions[df_transactions["Tipo"] == "Gasto"]["Monto"].sum()
+            total_income = sum(t["Monto"] for t in all_transactions if t["Tipo"] == "Ingreso")
+            total_expenses = sum(t["Monto"] for t in all_transactions if t["Tipo"] == "Gasto")
             annual_balance = total_income - total_expenses
             annual_savings_rate = (annual_balance / total_income * 100) if total_income > 0 else 0
 
-            annual_summary = pd.DataFrame({
-                "Concepto": [
-                    "Total Ingresos Anual",
-                    "Total Gastos Anual",
-                    "Balance Anual",
-                    "Tasa de Ahorro Anual (%)",
-                    "N° Total Transacciones"
-                ],
-                "Valor": [
-                    total_income,
-                    total_expenses,
-                    annual_balance,
-                    annual_savings_rate,
-                    len(all_transactions)
-                ]
-            })
+            annual_summary = [
+                {"Concepto": "Total Ingresos Anual", "Valor": total_income},
+                {"Concepto": "Total Gastos Anual", "Valor": total_expenses},
+                {"Concepto": "Balance Anual", "Valor": annual_balance},
+                {"Concepto": "Tasa de Ahorro Anual (%)", "Valor": annual_savings_rate},
+                {"Concepto": "N° Total Transacciones", "Valor": len(all_transactions)}
+            ]
 
             # Determinar directorio
             if output_dir is None:
@@ -342,14 +319,28 @@ class ReportGenerator:
             filename = f"Reporte_Anual_TermoWallet_{year}"
 
             if format.lower() == "xlsx":
-                filepath = os.path.join(output_dir, f"{filename}.xlsx")
-                with pd.ExcelWriter(filepath, engine='openpyxl') as writer:
-                    annual_summary.to_excel(writer, sheet_name='Resumen Anual', index=False)
-                    df_monthly.to_excel(writer, sheet_name='Resumen Mensual', index=False)
-                    df_transactions.to_excel(writer, sheet_name='Todas las Transacciones', index=False)
+                try:
+                    import openpyxl
+                    filepath = os.path.join(output_dir, f"{filename}.xlsx")
+                    wb = openpyxl.Workbook()
+                    
+                    ws_annual = wb.active
+                    ws_annual.title = "Resumen Anual"
+                    self._write_data_to_sheet(ws_annual, annual_summary)
+                    
+                    ws_monthly = wb.create_sheet("Resumen Mensual")
+                    self._write_data_to_sheet(ws_monthly, monthly_summaries)
+                    
+                    ws_trans = wb.create_sheet("Todas las Transacciones")
+                    self._write_data_to_sheet(ws_trans, all_transactions)
+                    
+                    wb.save(filepath)
+                except ImportError:
+                    filepath = os.path.join(output_dir, f"{filename}.csv")
+                    self._write_csv(filepath, all_transactions)
             else:
                 filepath = os.path.join(output_dir, f"{filename}.csv")
-                df_transactions.to_csv(filepath, index=False, encoding='utf-8-sig')
+                self._write_csv(filepath, all_transactions)
 
             return {
                 "success": True,

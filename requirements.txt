@@ -4,14 +4,11 @@ flet==0.28.3
 # Base de datos
 SQLAlchemy>=2.0.0
 
-# Procesamiento de datos
-pandas>=2.0.0
-numpy>=1.24.0
+# Procesamiento de archivos Excel (solo si usas reportes en Excel)
 openpyxl>=3.1.0
 
 # Utilidades
 python-dateutil>=2.8.0
-plotly>=5.0.0
 
 # Opcional: si usas QR codes
 qrcode>=7.4.0

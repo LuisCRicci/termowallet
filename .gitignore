@@ -9,3 +9,6 @@ src/utils/__pycache__/
 .devdbrc
 src/storage/
 None
+assets/
+build/
+requirements.txt.backup

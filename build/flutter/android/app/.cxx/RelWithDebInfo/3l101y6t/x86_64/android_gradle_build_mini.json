@@ -4,14 +4,14 @@
   ],
   "cleanCommandsComponents": [
     [
-      "/home/gandalf/Android/sdk/cmake/3.22.1/bin/ninja",
+      "/home/gandalf/Android/Sdk/cmake/3.22.1/bin/ninja",
       "-C",
       "/home/gandalf/Projects/mobile/termowallet/build/flutter/android/app/.cxx/RelWithDebInfo/3l101y6t/x86_64",
       "clean"
     ]
   ],
   "buildTargetsCommandComponents": [
-    "/home/gandalf/Android/sdk/cmake/3.22.1/bin/ninja",
+    "/home/gandalf/Android/Sdk/cmake/3.22.1/bin/ninja",
     "-C",
     "/home/gandalf/Projects/mobile/termowallet/build/flutter/android/app/.cxx/RelWithDebInfo/3l101y6t/x86_64",
     "{LIST_OF_TARGETS_TO_BUILD}"

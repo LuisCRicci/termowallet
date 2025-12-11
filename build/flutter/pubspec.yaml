@@ -5,16 +5,12 @@ dependencies:
   package_info_plus: ^8.0.2
   path: ^1.9.0
   path_provider: ^2.1.4
-  serious_python: 0.9.2
+  serious_python: 0.9.6
   url_strategy: ^0.2.0
   window_manager: ^0.4.3
 dependency_overrides:
   flet: 0.28.3
-  serious_python:
-    git:
-      path: src/serious_python
-      ref: ios-bundle-id-fix
-      url: https://github.com/flet-dev/serious-python.git
+  serious_python: 0.9.6
   wakelock_plus: ^1.2.10
   web: ^1.0.0
   window_manager: ^0.4.3

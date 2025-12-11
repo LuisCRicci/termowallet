@@ -1220,8 +1220,92 @@ class DatabaseManager:
             "income": income_count,
         }
         
-    # ========== AGREGAR ESTOS MÉTODOS A DatabaseManager EN database.py ==========
-    # Agregar después de los métodos existentes, antes del método close()
+    def get_monthly_trend_from_date(self, year: int, month: int, months: int = 12) -> list:
+        """
+        ✅ NUEVO: Obtiene la tendencia de los últimos N meses desde una fecha específica
+        
+        Args:
+            year: Año de referencia
+            month: Mes de referencia
+            months: Cantidad de meses hacia atrás (default: 12)
+        
+        Returns:
+            Lista de diccionarios con estadísticas mensuales
+        """
+        from dateutil.relativedelta import relativedelta
+        from datetime import datetime
+        
+        results = []
+        
+        # Calcular el mes de inicio (N meses atrás desde la fecha dada)
+        reference_date = datetime(year, month, 1)
+        
+        for i in range(months):
+            # Calcular cada mes hacia atrás
+            target_date = reference_date - relativedelta(months=i)
+            target_year = target_date.year
+            target_month = target_date.month
+            
+            summary = self.get_monthly_summary(target_year, target_month)
+            results.append(summary)
+        
+        # Invertir para que el más antiguo esté primero
+        results.reverse()
+        
+        return results
+
+
+    def get_total_statistics(self) -> dict:
+        """
+        ✅ NUEVO: Obtiene estadísticas consolidadas de TODAS las transacciones
+        
+        Returns:
+            Diccionario con estadísticas totales
+        """
+        try:
+            # Total de ingresos
+            total_income = self.session.query(
+                func.sum(Transaction.amount)
+            ).filter(
+                Transaction.transaction_type == "income"
+            ).scalar() or 0.0
+            
+            # Total de gastos
+            total_expenses = self.session.query(
+                func.sum(Transaction.amount)
+            ).filter(
+                Transaction.transaction_type == "expense"
+            ).scalar() or 0.0
+            
+            # Total de transacciones
+            transaction_count = self.session.query(
+                func.count(Transaction.id)
+            ).scalar() or 0
+            
+            # Calcular ahorro total
+            total_savings = total_income - total_expenses
+            savings_rate = (total_savings / total_income * 100) if total_income > 0 else 0
+            
+            return {
+                "total_income": float(total_income),
+                "total_expenses": float(total_expenses),
+                "total_savings": float(total_savings),
+                "savings_rate": float(savings_rate),
+                "transaction_count": int(transaction_count),
+            }
+            
+        except Exception as e:
+            print(f"❌ Error al obtener estadísticas totales: {e}")
+            return {
+                "total_income": 0.0,
+                "total_expenses": 0.0,
+                "total_savings": 0.0,
+                "savings_rate": 0.0,
+                "transaction_count": 0,
+            }
+        
+        
+    # ========== PRESUPUESTOS MENSUALES ==========
 
     def get_monthly_budget(self, year: int, month: int) -> Optional[MonthlyBudget]:
         """Obtiene el presupuesto de un mes específico"""

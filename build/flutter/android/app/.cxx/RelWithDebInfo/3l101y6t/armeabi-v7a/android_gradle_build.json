@@ -4,14 +4,14 @@
   ],
   "cleanCommandsComponents": [
     [
-      "/home/gandalf/Android/sdk/cmake/3.22.1/bin/ninja",
+      "/home/gandalf/Android/Sdk/cmake/3.22.1/bin/ninja",
       "-C",
       "/home/gandalf/Projects/mobile/termowallet/build/flutter/android/app/.cxx/RelWithDebInfo/3l101y6t/armeabi-v7a",
       "clean"
     ]
   ],
   "buildTargetsCommandComponents": [
-    "/home/gandalf/Android/sdk/cmake/3.22.1/bin/ninja",
+    "/home/gandalf/Android/Sdk/cmake/3.22.1/bin/ninja",
     "-C",
     "/home/gandalf/Projects/mobile/termowallet/build/flutter/android/app/.cxx/RelWithDebInfo/3l101y6t/armeabi-v7a",
     "{LIST_OF_TARGETS_TO_BUILD}"
@@ -19,8 +19,8 @@
   "libraries": {},
   "toolchains": {
     "toolchain": {
-      "cCompilerExecutable": "/home/gandalf/Android/sdk/ndk/25.1.8937393/toolchains/llvm/prebuilt/linux-x86_64/bin/clang.lld",
-      "cppCompilerExecutable": "/home/gandalf/Android/sdk/ndk/25.1.8937393/toolchains/llvm/prebuilt/linux-x86_64/bin/clang++.lld"
+      "cCompilerExecutable": "/home/gandalf/Android/Sdk/ndk/25.1.8937393/toolchains/llvm/prebuilt/linux-x86_64/bin/clang.lld",
+      "cppCompilerExecutable": "/home/gandalf/Android/Sdk/ndk/25.1.8937393/toolchains/llvm/prebuilt/linux-x86_64/bin/clang++.lld"
     }
   },
   "cFileExtensions": [],

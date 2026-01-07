@@ -8,9 +8,14 @@ Archivo: src/ui/categories_view.py
 """
 
 import flet as ft
+from datetime import datetime
 from .base_view import BaseView
 from src.utils.config import Config
-
+from .widgets import (
+    CategoryBudgetTile, 
+    CategoryBudgetSummaryCard,
+    CategoryBudgetDistributionChart
+)
 
 class CategoriesView(BaseView):
     """Vista de gestión de categorías con picker integrado"""
@@ -1160,13 +1165,349 @@ class CategoriesView(BaseView):
         except Exception as e:
             print(f"❌ Error al recargar vista: {e}")
 
+    """
+    ✅ INTEGRACIÓN: Distribución Porcentual en CategoriesView
+    REEMPLAZAR el método build() en: src/ui/categories_view.py
+
+    También agregar estos imports al inicio del archivo:
+    from .widgets import (
+        CategoryBudgetTile, 
+        CategoryBudgetSummaryCard,
+        CategoryBudgetDistributionChart
+    )
+    """
+
+    def show_budget_distribution_dialog(self, e, current_month: int, current_year: int):
+        """
+        Muestra diálogo para configurar la distribución porcentual del presupuesto
+        
+        Args:
+            current_month: Mes actual
+            current_year: Año actual
+        """
+        
+        # Obtener distribución actual
+        distribution = self.db.get_category_budget_distribution(
+            current_year, current_month
+        )
+        
+        # Estado temporal de porcentajes (para edición)
+        temp_percentages = {
+            cat["id"]: cat["percentage"] 
+            for cat in distribution["categories"]
+        }
+        
+        # Total dinámico
+        total_display = ft.Text(
+            f"{sum(temp_percentages.values()):.1f}%",
+            size=24,
+            weight=ft.FontWeight.BOLD,
+            color="#667eea",
+        )
+        
+        # Contenedor de tiles
+        tiles_container = ft.Column(
+            spacing=10,
+            scroll=ft.ScrollMode.AUTO,
+        )
+        
+        def update_tiles():
+            """Actualiza los tiles con los valores actuales"""
+            tiles_container.controls.clear()
+            
+            # Recalcular datos con nuevos porcentajes
+            for cat_data in distribution["categories"]:
+                cat_data["percentage"] = temp_percentages[cat_data["id"]]
+                # Recalcular monto sugerido
+                cat_data["suggested_amount"] = (
+                    distribution["base_amount"] * cat_data["percentage"] / 100
+                )
+                
+                tiles_container.controls.append(
+                    CategoryBudgetTile(
+                        cat_data,
+                        on_change=handle_percentage_change
+                    )
+                )
+            
+            try:
+                if tiles_container.page:
+                    tiles_container.update()
+            except:
+                pass
+        
+        def handle_percentage_change(category_id: int, new_percentage: float):
+            """Maneja cambios en porcentajes individuales"""
+            temp_percentages[category_id] = new_percentage
+            
+            # Actualizar total
+            new_total = sum(temp_percentages.values())
+            total_display.value = f"{new_total:.1f}%"
+            
+            # Cambiar color según validez
+            if abs(new_total - 100) < 0.01:
+                total_display.color = "#22c55e"
+            elif new_total > 100:
+                total_display.color = "#ef4444"
+            else:
+                total_display.color = "#f59e0b"
+            
+            try:
+                if total_display.page:
+                    total_display.update()
+            except:
+                pass
+        
+        def initialize_equal(e):
+            """Distribuir equitativamente"""
+            num_categories = len(temp_percentages)
+            equal_pct = 100.0 / num_categories if num_categories > 0 else 0
+            
+            for cat_id in temp_percentages.keys():
+                temp_percentages[cat_id] = round(equal_pct, 2)
+            
+            update_tiles()
+            handle_percentage_change(0, 0)  # Actualizar total
+        
+        def initialize_smart(e):
+            """Distribución inteligente basada en historial"""
+            if self.db.initialize_category_budgets_smart(current_year, current_month):
+                # Recargar datos
+                new_distribution = self.db.get_category_budget_distribution(
+                    current_year, current_month
+                )
+                
+                for cat_data in new_distribution["categories"]:
+                    temp_percentages[cat_data["id"]] = cat_data["percentage"]
+                
+                update_tiles()
+                handle_percentage_change(0, 0)
+                self.show_snackbar("✅ Distribución inteligente aplicada")
+            else:
+                self.show_snackbar("No hay historial suficiente, usando distribución equitativa")
+                initialize_equal(e)
+        
+        def reset_all(e):
+            """Resetear todo a 0%"""
+            for cat_id in temp_percentages.keys():
+                temp_percentages[cat_id] = 0
+            
+            update_tiles()
+            handle_percentage_change(0, 0)
+        
+        def save_distribution(e):
+            """Guarda la distribución configurada"""
+            # Validar que sume 100%
+            total = sum(temp_percentages.values())
+            
+            if abs(total - 100) >= 0.1:
+                self.show_snackbar(
+                    f"La suma debe ser 100%, actualmente es {total:.1f}%",
+                    error=True
+                )
+                return
+            
+            # Guardar en BD
+            result = self.db.update_category_budgets_bulk(
+                current_year,
+                current_month,
+                temp_percentages
+            )
+            
+            if result["success"]:
+                self.close_dialog()
+                self.show_snackbar(result["message"])
+                self._reload_view()
+            else:
+                self.show_snackbar(result["message"], error=True)
+        
+        # Inicializar tiles
+        update_tiles()
+        
+        # Construir diálogo
+        dialog = ft.AlertDialog(
+            title=ft.Row(
+                [
+                    ft.Icon(ft.Icons.PIE_CHART, size=28, color="#667eea"),
+                    ft.Text(
+                        f"Distribución de Presupuesto - {current_month}/{current_year}",
+                        size=18,
+                        weight=ft.FontWeight.BOLD,
+                    ),
+                ],
+                spacing=10,
+            ),
+            content=ft.Container(
+                width=650,
+                height=600,
+                content=ft.Column(
+                    [
+                        # Resumen superior
+                        ft.Container(
+                            content=ft.Column(
+                                [
+                                    ft.Row(
+                                        [
+                                            ft.Text(
+                                                "Total asignado:",
+                                                size=14,
+                                                color=ft.Colors.GREY_600,
+                                            ),
+                                            total_display,
+                                        ],
+                                        alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                                    ),
+                                    ft.Text(
+                                        f"Base: {Config.CURRENCY_SYMBOL} {distribution['base_amount']:.2f}",
+                                        size=12,
+                                        color=ft.Colors.GREY_600,
+                                    ),
+                                ],
+                                spacing=5,
+                            ),
+                            padding=15,
+                            bgcolor=ft.Colors.GREY_50,
+                            border_radius=8,
+                        ),
+                        
+                        # Botones de ayuda
+                        ft.Row(
+                            [
+                                ft.OutlinedButton(
+                                    "Equitativo",
+                                    icon=ft.Icons.BALANCE,
+                                    on_click=initialize_equal,
+                                    tooltip="Dividir 100% en partes iguales",
+                                ),
+                                ft.OutlinedButton(
+                                    "Inteligente",
+                                    icon=ft.Icons.AUTO_AWESOME,
+                                    on_click=initialize_smart,
+                                    tooltip="Basado en gastos históricos",
+                                ),
+                                ft.OutlinedButton(
+                                    "Resetear",
+                                    icon=ft.Icons.REFRESH,
+                                    on_click=reset_all,
+                                    tooltip="Poner todo en 0%",
+                                ),
+                            ],
+                            spacing=10,
+                            wrap=True,
+                        ),
+                        
+                        ft.Divider(height=10),
+                        
+                        # Lista de categorías
+                        ft.Text(
+                            "Ajusta los porcentajes de cada categoría:",
+                            size=13,
+                            weight=ft.FontWeight.BOLD,
+                        ),
+                        
+                        ft.Container(
+                            content=tiles_container,
+                            expand=True,
+                        ),
+                        
+                        # Advertencia
+                        ft.Container(
+                            content=ft.Text(
+                                "💡 Tip: La suma de todos los porcentajes debe ser exactamente 100%",
+                                size=11,
+                                color=ft.Colors.BLUE_700,
+                            ),
+                            padding=10,
+                            bgcolor=ft.Colors.BLUE_50,
+                            border_radius=8,
+                        ),
+                    ],
+                    spacing=10,
+                    scroll=ft.ScrollMode.AUTO,
+                ),
+            ),
+            actions=[
+                ft.TextButton(
+                    "Cancelar",
+                    on_click=lambda _: self.close_dialog()
+                ),
+                ft.ElevatedButton(
+                    "Guardar Distribución",
+                    icon=ft.Icons.SAVE,
+                    on_click=save_distribution,
+                    style=ft.ButtonStyle(
+                        bgcolor="#667eea",
+                        color=ft.Colors.WHITE,
+                    ),
+                ),
+            ],
+            actions_alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+        )
+        
+        self.show_dialog(dialog)
+
+
+    def show_distribution_status(self, e, current_month: int, current_year: int):
+        """
+        Muestra el estado actual de la distribución (solo lectura)
+        """
+        distribution = self.db.get_category_budget_distribution(
+            current_year, current_month
+        )
+        
+        dialog = ft.AlertDialog(
+            title=ft.Text("Estado de Distribución"),
+            content=ft.Container(
+                width=550,
+                height=500,
+                content=ft.Column(
+                    [
+                        CategoryBudgetSummaryCard(distribution),
+                        ft.Divider(),
+                        CategoryBudgetDistributionChart(distribution["categories"]),
+                    ],
+                    spacing=15,
+                    scroll=ft.ScrollMode.AUTO,
+                ),
+            ),
+            actions=[
+                ft.TextButton("Cerrar", on_click=lambda _: self.close_dialog()),
+                ft.ElevatedButton(
+                    "Configurar",
+                    icon=ft.Icons.EDIT,
+                    on_click=lambda e: [
+                        self.close_dialog(),
+                        self.show_budget_distribution_dialog(
+                            e, current_month, current_year
+                        )
+                    ],
+                ),
+            ],
+        )
+        
+        self.show_dialog(dialog)
+
+# ✅ CORRECCIÓN: Método build() al NIVEL DE LA CLASE
     def build(self) -> ft.Control:
-        """Construye la vista de categorías"""
+        """
+        ✅ VERSIÓN ACTUALIZADA: Con gestión de distribución porcentual
+        """
         expense_cats = self.db.get_all_categories("expense")
         income_cats = self.db.get_all_categories("income")
-
+        
+        # Obtener mes/año actual
+        now = datetime.now()
+        current_month = now.month
+        current_year = now.year
+        
+        # Obtener distribución del mes actual
+        distribution = self.db.get_category_budget_distribution(
+            current_year, current_month
+        )
+        
         tabs_content = []
-
+        
+        # Tab de Gastos
         expense_tiles = [self._create_category_tile(cat) for cat in expense_cats]
         tabs_content.append(
             ft.Tab(
@@ -1175,7 +1516,8 @@ class CategoriesView(BaseView):
                 content=ft.Column(expense_tiles, scroll=ft.ScrollMode.AUTO),
             )
         )
-
+        
+        # Tab de Ingresos
         income_tiles = [self._create_category_tile(cat) for cat in income_cats]
         tabs_content.append(
             ft.Tab(
@@ -1184,24 +1526,95 @@ class CategoriesView(BaseView):
                 content=ft.Column(income_tiles, scroll=ft.ScrollMode.AUTO),
             )
         )
-
+        
         category_tabs = ft.Tabs(tabs=tabs_content, expand=True)
-
+        
         return ft.Column(
             [
-                ft.Text("🏷️ Categorías", size=24, weight=ft.FontWeight.BOLD),
+                # Encabezado
+                ft.Row(
+                    [
+                        ft.Text(
+                            "🏷️ Categorías",
+                            size=24,
+                            weight=ft.FontWeight.BOLD,
+                        ),
+                        # Botón de distribución
+                        ft.ElevatedButton(
+                            "Distribución de Presupuesto",
+                            icon=ft.Icons.PIE_CHART,
+                            on_click=lambda e: self.show_budget_distribution_dialog(
+                                e, current_month, current_year
+                            ),
+                            style=ft.ButtonStyle(
+                                bgcolor="#667eea",
+                                color=ft.Colors.WHITE,
+                            ),
+                        ),
+                    ],
+                    alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                ),
+                
+                # Banner informativo sobre distribución
+                ft.Container(
+                    content=ft.Column(
+                        [
+                            ft.Row(
+                                [
+                                    ft.Icon(
+                                        ft.Icons.PIE_CHART,
+                                        size=20,
+                                        color="#667eea"
+                                    ),
+                                    ft.Text(
+                                        f"Distribución {current_month}/{current_year}: "
+                                        f"{distribution['total_percentage']:.1f}% asignado",
+                                        size=13,
+                                        weight=ft.FontWeight.BOLD,
+                                        color="#667eea",
+                                    ),
+                                    ft.IconButton(
+                                        icon=ft.Icons.INFO_OUTLINE,
+                                        icon_size=18,
+                                        tooltip="Ver detalles",
+                                        on_click=lambda e: self.show_distribution_status(
+                                            e, current_month, current_year
+                                        ),
+                                    ),
+                                ],
+                                spacing=8,
+                            ),
+                            ft.ProgressBar(
+                                value=min(distribution['total_percentage'] / 100, 1.0),
+                                color="#22c55e" if distribution['is_valid'] else "#f59e0b",
+                                bgcolor=ft.Colors.GREY_200,
+                                height=4,
+                            ),
+                        ],
+                        spacing=5,
+                    ),
+                    padding=12,
+                    bgcolor=ft.Colors.BLUE_50,
+                    border_radius=8,
+                ),
+                
+                # Tips
                 ft.Container(
                     content=ft.Text(
-                        "💡 Tip: Haz clic en el icono 🏷️ para gestionar las palabras clave de cada categoría",
+                        "💡 Tip: Haz clic en 🏷️ para gestionar palabras clave | "
+                        "Usa 'Distribución de Presupuesto' para asignar porcentajes",
                         size=12,
                         color=ft.Colors.GREY_600,
                         italic=True,
                     ),
                     padding=10,
-                    bgcolor=ft.Colors.BLUE_50,
+                    bgcolor=ft.Colors.GREY_50,
                     border_radius=8,
                 ),
+                
                 ft.Divider(),
+                
+                # Tabs de categorías
                 category_tabs,
             ],
             expand=True,

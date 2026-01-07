@@ -1,6 +1,8 @@
 """
-Vista HOME - Dashboard principal
+Vista HOME - Dashboard principal - ✅ CORREGIDO
 Archivo: src/ui/home_view.py
+
+CORRECCIÓN: mini_cards era una tupla, ahora se desempaqueta correctamente
 """
 
 import flet as ft
@@ -13,7 +15,8 @@ from .widgets import (
     CompactCategoryBar,
     CompactTransactionTile,
     ProjectionCard,
-    BudgetSummaryCard,  # ⭐ AGREGAR
+    BudgetSummaryCard,
+    CategoryBudgetAlertWidget,
 )
 from src.utils.config import Config
 from src.utils.helpers import get_month_name
@@ -63,12 +66,9 @@ class HomeView(BaseView):
             expenses_by_category = self.db.get_expenses_by_category(
                 self.current_year, self.current_month
             )
-            # ========== EN EL MÉTODO build() ==========
-            # Después de obtener datos (línea ~67), agregar:
-
             budget_status = self.db.get_budget_status(
                 self.current_year, self.current_month
-            )  # ⭐ AGREGAR
+            )
             top_expenses = self.db.get_top_expenses(
                 self.current_year, self.current_month, limit=3
             )
@@ -81,6 +81,13 @@ class HomeView(BaseView):
             recent_transactions = self.db.get_transactions_by_month(
                 self.current_year, self.current_month
             )[:3]
+            
+            # ✅ NUEVO: Obtener alertas de presupuesto
+            now = datetime.now()
+            category_alerts = self.db.get_all_category_budget_alerts(
+                now.year, 
+                now.month
+            )
 
         except Exception as e:
             print(f"❌ ERROR al obtener datos: {e}")
@@ -91,6 +98,7 @@ class HomeView(BaseView):
                 "savings_rate": 0,
             }
             expenses_by_category = []
+            budget_status = {"budget_exists": False}
             top_expenses = []
             daily_stats = {
                 "daily_average": 0,
@@ -106,6 +114,7 @@ class HomeView(BaseView):
                 "is_increasing": False,
             }
             recent_transactions = []
+            category_alerts = []
 
         # Selector de mes
         month_label = get_month_name(self.current_month)
@@ -202,7 +211,7 @@ class HomeView(BaseView):
             ),
         )
 
-        # Mini cards
+        # ✅ CORRECCIÓN: Mini cards como ft.Row directamente, no como tupla
         mini_cards = ft.Row(
             [
                 MiniStatCard(
@@ -229,19 +238,28 @@ class HomeView(BaseView):
             spacing=10,
         )
 
-        # ========== AGREGAR WIDGET DE PRESUPUESTO ==========
-        # Después de mini_cards (línea ~250), agregar:
-        
-        # Ensamblar componentes
+        # ✅ Ensamblar componentes correctamente
         content_widgets = [
             month_selector,
             ft.Container(height=10),
             savings_card,
             ft.Container(height=15),
-            mini_cards,
-            ft.Container(height=15),  # ⭐ AGREGAR
-            BudgetSummaryCard(budget_status),  # ⭐ AGREGAR (Widget de presupuesto)
+            mini_cards,  # ✅ Ya no es tupla
+            ft.Container(height=15),
         ]
+        
+        # ✅ NUEVO: Widget de alertas (si hay alertas)
+        if category_alerts:
+            content_widgets.append(
+                CategoryBudgetAlertWidget(
+                    category_alerts,
+                    on_click=lambda e: self.show_alerts_detail()
+                )
+            )
+            content_widgets.append(ft.Container(height=15))
+        
+        # Widget de presupuesto
+        content_widgets.append(BudgetSummaryCard(budget_status))
 
         # Top 3 gastos
         if top_expenses:
@@ -381,3 +399,147 @@ class HomeView(BaseView):
             expand=True,
             spacing=0,
         )
+
+    def show_alerts_detail(self):
+        """
+        ✅ NUEVO: Muestra diálogo con detalle de todas las alertas
+        """
+        from datetime import datetime
+        
+        now = datetime.now()
+        alerts = self.db.get_all_category_budget_alerts(now.year, now.month)
+        
+        if not alerts:
+            self.show_snackbar("✅ No hay alertas de presupuesto")
+            return
+        
+        alert_details = []
+        for alert in alerts:
+            # Color según severidad
+            if alert["alert_type"] == "over_budget":
+                theme_color = "#ef4444"
+            elif alert["alert_type"] == "danger":
+                theme_color = "#f59e0b"
+            else:
+                theme_color = "#3b82f6"
+            
+            alert_details.append(
+                ft.Container(
+                    content=ft.Column(
+                        [
+                            ft.Row(
+                                [
+                                    ft.Text(alert["icon"], size=24),
+                                    ft.Column(
+                                        [
+                                            ft.Text(
+                                                alert["category_name"],
+                                                size=15,
+                                                weight=ft.FontWeight.BOLD,
+                                            ),
+                                            ft.Text(
+                                                f"{alert['percentage_used']:.1f}% usado",
+                                                size=12,
+                                                color=theme_color,
+                                                weight=ft.FontWeight.BOLD,
+                                            ),
+                                        ],
+                                        spacing=2,
+                                        expand=True,
+                                    ),
+                                ],
+                                spacing=10,
+                            ),
+                            ft.ProgressBar(
+                                value=min(alert["percentage_used"] / 100, 1.0),
+                                color=theme_color,
+                                bgcolor=ft.Colors.GREY_200,
+                                height=6,
+                            ),
+                            ft.Row(
+                                [
+                                    ft.Column(
+                                        [
+                                            ft.Text("Presupuesto", size=10, color=ft.Colors.GREY_600),
+                                            ft.Text(
+                                                f"{Config.CURRENCY_SYMBOL} {alert['assigned_amount']:.2f}",
+                                                size=12,
+                                                weight=ft.FontWeight.BOLD,
+                                            ),
+                                        ],
+                                        spacing=2,
+                                    ),
+                                    ft.Column(
+                                        [
+                                            ft.Text("Gastado", size=10, color=ft.Colors.GREY_600),
+                                            ft.Text(
+                                                f"{Config.CURRENCY_SYMBOL} {alert['spent_amount']:.2f}",
+                                                size=12,
+                                                weight=ft.FontWeight.BOLD,
+                                                color=theme_color,
+                                            ),
+                                        ],
+                                        spacing=2,
+                                    ),
+                                    ft.Column(
+                                        [
+                                            ft.Text(
+                                                "Disponible" if alert['remaining'] >= 0 else "Excedido",
+                                                size=10,
+                                                color=ft.Colors.GREY_600
+                                            ),
+                                            ft.Text(
+                                                f"{Config.CURRENCY_SYMBOL} {abs(alert['remaining']):.2f}",
+                                                size=12,
+                                                weight=ft.FontWeight.BOLD,
+                                                color="#22c55e" if alert['remaining'] >= 0 else "#ef4444",
+                                            ),
+                                        ],
+                                        spacing=2,
+                                    ),
+                                ],
+                                alignment=ft.MainAxisAlignment.SPACE_AROUND,
+                            ),
+                        ],
+                        spacing=10,
+                    ),
+                    padding=15,
+                    bgcolor=ft.Colors.GREY_50,
+                    border_radius=10,
+                    margin=ft.margin.only(bottom=10),
+                )
+            )
+        
+        dialog = ft.AlertDialog(
+            title=ft.Row(
+                [
+                    ft.Icon(ft.Icons.WARNING_AMBER, color="#f59e0b", size=28),
+                    ft.Text(
+                        f"Alertas de Presupuesto ({len(alerts)})",
+                        size=18,
+                        weight=ft.FontWeight.BOLD,
+                    ),
+                ],
+                spacing=10,
+            ),
+            content=ft.Container(
+                content=ft.Column(
+                    alert_details,
+                    scroll=ft.ScrollMode.AUTO,
+                ),
+                width=450,
+                height=400,
+            ),
+            actions=[
+                ft.TextButton(
+                    "Ir a Categorías",
+                    on_click=lambda e: [
+                        self.close_dialog(),
+                        self.on_nav_change(4)  # Navegar a categorías
+                    ],
+                ),
+                ft.TextButton("Cerrar", on_click=lambda _: self.close_dialog()),
+            ],
+        )
+        
+        self.show_dialog(dialog)

@@ -1,4 +1,4 @@
-"""
+"""s
 Vista de gráficos y análisis - CON TENDENCIA DINÁMICA Y AHORRO TOTAL
 Archivo: src/ui/charts_view.py
 

@@ -9,6 +9,7 @@ from datetime import datetime
 from typing import List, Optional, Dict
 import os
 import sys
+from sqlalchemy import and_
 
 # Agregar el directorio raíz del proyecto al path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -859,6 +860,425 @@ class DatabaseManager:
             self.session.commit()
             return True
         return False
+    
+    
+    #  nuevos métodos para presupuestos por categoría
+    
+    """
+    ✅ CÓDIGO COMPLETO: 7 Métodos para Distribución Porcentual
+    Agregar a: src/data/database.py (clase DatabaseManager, antes de close())
+
+    IMPORTANTE: Agregar este import al inicio del archivo:
+    from sqlalchemy import and_
+    """
+
+    def get_category_budgets(self, year: int, month: int) -> List:
+        """
+        Obtiene la distribución porcentual configurada para un mes
+        
+        Args:
+            year: Año
+            month: Mes (1-12)
+        
+        Returns:
+            Lista de CategoryBudget con porcentajes asignados
+        """
+        from src.data.models import CategoryBudget
+        
+        return (
+            self.session.query(CategoryBudget)
+            .filter(
+                CategoryBudget.year == year,
+                CategoryBudget.month == month
+            )
+            .all()
+        )
+
+
+    def get_category_budget_distribution(self, year: int, month: int) -> Dict:
+        """
+        Obtiene distribución completa con cálculos y validaciones
+        
+        Args:
+            year: Año
+            month: Mes (1-12)
+        
+        Returns:
+            Dict con:
+            - total_percentage: Suma de porcentajes
+            - is_valid: Si suma 100%
+            - base_amount: Monto base (presupuesto o ingresos)
+            - base_source: Origen del monto base
+            - categories: Lista con datos de cada categoría
+            - warnings: Alertas si hay problemas
+            - unassigned_percentage: Porcentaje sin asignar
+        """
+        from src.data.models import CategoryBudget
+        
+        # Obtener presupuesto del mes
+        budget = self.get_monthly_budget(year, month)
+        summary = self.get_monthly_summary(year, month)
+        
+        # Determinar monto base (prioridad: presupuesto > ingresos reales > 0)
+        if budget and budget.expense_limit > 0:
+            base_amount = budget.expense_limit
+            base_source = "presupuesto"
+        elif summary["total_income"] > 0:
+            base_amount = summary["total_income"]
+            base_source = "ingresos_reales"
+        else:
+            base_amount = 0
+            base_source = "sin_base"
+        
+        # Obtener categorías de gastos activas
+        expense_categories = self.get_all_categories("expense")
+        
+        # Obtener distribución configurada
+        configured = {
+            cb.category_id: cb 
+            for cb in self.get_category_budgets(year, month)
+        }
+        
+        # Construir datos completos
+        categories_data = []
+        total_percentage = 0
+        
+        for cat in expense_categories:
+            cat_budget = configured.get(cat.id)
+            
+            if cat_budget:
+                percentage = cat_budget.percentage
+                suggested = cat_budget.suggested_amount
+            else:
+                # Si no está configurada, asignar 0%
+                percentage = 0
+                suggested = 0
+            
+            total_percentage += percentage
+            
+            # Calcular monto sugerido basado en el monto base actual
+            calculated_amount = (base_amount * percentage / 100) if base_amount > 0 else 0
+            
+            # Obtener gasto real en la categoría
+            actual_spent = (
+                self.session.query(func.sum(Transaction.amount))
+                .filter(
+                    Transaction.category_id == cat.id,
+                    Transaction.transaction_type == "expense",
+                    extract("year", Transaction.date) == year,
+                    extract("month", Transaction.date) == month
+                )
+                .scalar() or 0.0
+            )
+            
+            categories_data.append({
+                "id": cat.id,
+                "name": cat.name,
+                "icon": cat.icon,
+                "color": cat.color,
+                "percentage": percentage,
+                "suggested_amount": calculated_amount,
+                "actual_spent": actual_spent,
+                "remaining": max(0, calculated_amount - actual_spent),
+                "is_over": actual_spent > calculated_amount if calculated_amount > 0 else False,
+                "usage_percent": (actual_spent / calculated_amount * 100) if calculated_amount > 0 else 0,
+            })
+        
+        # Validaciones y advertencias
+        warnings = []
+        is_valid = abs(total_percentage - 100.0) < 0.01  # Tolerancia de 0.01%
+        
+        if base_amount == 0:
+            warnings.append("⚠️ No hay presupuesto ni ingresos configurados como base")
+        
+        if total_percentage < 100:
+            warnings.append(f"⚠️ Falta asignar {100 - total_percentage:.1f}% del presupuesto")
+        elif total_percentage > 100:
+            warnings.append(f"⚠️ Se ha excedido {total_percentage - 100:.1f}% del 100%")
+        
+        if len([c for c in categories_data if c["percentage"] == 0]) > 0:
+            warnings.append("⚠️ Hay categorías sin porcentaje asignado")
+        
+        return {
+            "total_percentage": total_percentage,
+            "is_valid": is_valid,
+            "base_amount": base_amount,
+            "base_source": base_source,
+            "categories": sorted(categories_data, key=lambda x: x["percentage"], reverse=True),
+            "warnings": warnings,
+            "unassigned_percentage": max(0, 100 - total_percentage),
+        }
+
+
+    def update_category_budget(
+        self,
+        year: int,
+        month: int,
+        category_id: int,
+        percentage: float,
+        notes: Optional[str] = None
+    ) -> bool:
+        """
+        Actualiza el porcentaje asignado a una categoría
+        
+        Args:
+            year: Año
+            month: Mes (1-12)
+            category_id: ID de la categoría
+            percentage: Porcentaje a asignar (0-100)
+            notes: Notas opcionales
+            
+        Returns:
+            bool: True si se actualizó correctamente
+        """
+        from src.data.models import CategoryBudget
+        
+        try:
+            # Validar porcentaje
+            if percentage < 0 or percentage > 100:
+                print(f"❌ Porcentaje inválido: {percentage}")
+                return False
+            
+            # Buscar si ya existe
+            existing = (
+                self.session.query(CategoryBudget)
+                .filter(
+                    CategoryBudget.year == year,
+                    CategoryBudget.month == month,
+                    CategoryBudget.category_id == category_id
+                )
+                .first()
+            )
+            
+            # Calcular monto sugerido
+            budget = self.get_monthly_budget(year, month)
+            summary = self.get_monthly_summary(year, month)
+            
+            if budget and budget.expense_limit > 0:
+                base = budget.expense_limit
+            elif summary["total_income"] > 0:
+                base = summary["total_income"]
+            else:
+                base = 0
+            
+            suggested_amount = (base * percentage / 100) if base > 0 else 0
+            
+            if existing:
+                # Actualizar existente
+                existing.percentage = percentage
+                existing.suggested_amount = suggested_amount
+                existing.notes = notes
+                existing.updated_at = datetime.now()
+            else:
+                # Crear nuevo
+                new_budget = CategoryBudget(
+                    year=year,
+                    month=month,
+                    category_id=category_id,
+                    percentage=percentage,
+                    suggested_amount=suggested_amount,
+                    notes=notes
+                )
+                self.session.add(new_budget)
+            
+            self.session.commit()
+            return True
+            
+        except Exception as e:
+            print(f"❌ Error al actualizar CategoryBudget: {e}")
+            self.session.rollback()
+            return False
+
+
+    def update_category_budgets_bulk(
+        self,
+        year: int,
+        month: int,
+        percentages: Dict[int, float]
+    ) -> Dict:
+        """
+        Actualiza múltiples porcentajes a la vez
+        
+        Args:
+            year: Año
+            month: Mes (1-12)
+            percentages: Dict {category_id: percentage}
+            
+        Returns:
+            Dict con resultado:
+            - success: bool
+            - total_percentage: float
+            - is_valid: bool
+            - updated_count: int
+            - message: str
+        """
+        try:
+            # Validar que la suma sea 100%
+            total = sum(percentages.values())
+            is_valid = abs(total - 100.0) < 0.01
+            
+            if not is_valid:
+                return {
+                    "success": False,
+                    "total_percentage": total,
+                    "is_valid": False,
+                    "updated_count": 0,
+                    "message": f"La suma debe ser 100%, actualmente es {total:.1f}%"
+                }
+            
+            # Actualizar cada categoría
+            updated_count = 0
+            for cat_id, percentage in percentages.items():
+                if self.update_category_budget(year, month, cat_id, percentage):
+                    updated_count += 1
+            
+            return {
+                "success": True,
+                "total_percentage": total,
+                "is_valid": True,
+                "updated_count": updated_count,
+                "message": f"✅ {updated_count} categorías actualizadas correctamente"
+            }
+            
+        except Exception as e:
+            return {
+                "success": False,
+                "total_percentage": 0,
+                "is_valid": False,
+                "updated_count": 0,
+                "message": f"Error: {str(e)}"
+            }
+
+
+    def initialize_category_budgets_equal(self, year: int, month: int) -> bool:
+        """
+        Inicializa distribución equitativa entre todas las categorías de gastos
+        
+        Asigna automáticamente porcentajes iguales a todas las categorías.
+        Útil para empezar desde cero.
+        
+        Args:
+            year: Año
+            month: Mes (1-12)
+        
+        Returns:
+            bool: True si se inicializó correctamente
+        """
+        try:
+            expense_categories = self.get_all_categories("expense")
+            
+            if not expense_categories:
+                return False
+            
+            # Calcular porcentaje equitativo
+            equal_percentage = 100.0 / len(expense_categories)
+            
+            # Asignar a cada categoría
+            for cat in expense_categories:
+                self.update_category_budget(
+                    year, month, cat.id, 
+                    round(equal_percentage, 2)
+                )
+            
+            print(f"✅ {len(expense_categories)} categorías inicializadas con {equal_percentage:.2f}% cada una")
+            return True
+            
+        except Exception as e:
+            print(f"❌ Error al inicializar: {e}")
+            return False
+
+
+    def initialize_category_budgets_smart(self, year: int, month: int) -> bool:
+        """
+        Inicializa distribución inteligente basada en gastos históricos
+        
+        Analiza los últimos 3 meses de gastos y asigna porcentajes
+        proporcionales a cada categoría.
+        
+        Args:
+            year: Año
+            month: Mes (1-12)
+        
+        Returns:
+            bool: True si se inicializó correctamente
+        """
+        try:
+            from dateutil.relativedelta import relativedelta
+            
+            expense_categories = self.get_all_categories("expense")
+            
+            if not expense_categories:
+                return False
+            
+            # Analizar últimos 3 meses
+            reference_date = datetime(year, month, 1)
+            category_totals = {cat.id: 0.0 for cat in expense_categories}
+            
+            for i in range(1, 4):  # 3 meses atrás
+                past_date = reference_date - relativedelta(months=i)
+                expenses = self.get_expenses_by_category(past_date.year, past_date.month)
+                
+                for expense in expenses:
+                    # Buscar categoría correspondiente
+                    cat = next((c for c in expense_categories if c.name == expense["category"]), None)
+                    if cat:
+                        category_totals[cat.id] += expense["total"]
+            
+            # Calcular total global
+            grand_total = sum(category_totals.values())
+            
+            if grand_total == 0:
+                # Si no hay historial, usar distribución equitativa
+                return self.initialize_category_budgets_equal(year, month)
+            
+            # Calcular porcentajes basados en historial
+            for cat in expense_categories:
+                percentage = (category_totals[cat.id] / grand_total * 100)
+                self.update_category_budget(
+                    year, month, cat.id,
+                    round(percentage, 2)
+                )
+            
+            print(f"✅ Distribución inteligente aplicada basada en {grand_total:.2f} de gastos históricos")
+            return True
+            
+        except Exception as e:
+            print(f"❌ Error en inicialización inteligente: {e}")
+            # Fallback a distribución equitativa
+            return self.initialize_category_budgets_equal(year, month)
+
+
+    def delete_category_budgets(self, year: int, month: int) -> bool:
+        """
+        Elimina toda la configuración de distribución de un mes
+        
+        Args:
+            year: Año
+            month: Mes (1-12)
+        
+        Returns:
+            bool: True si se eliminó correctamente
+        """
+        from src.data.models import CategoryBudget
+        
+        try:
+            deleted = (
+                self.session.query(CategoryBudget)
+                .filter(
+                    CategoryBudget.year == year,
+                    CategoryBudget.month == month
+                )
+                .delete()
+            )
+            
+            self.session.commit()
+            print(f"✅ {deleted} configuraciones de categoría eliminadas")
+            return True
+            
+        except Exception as e:
+            print(f"❌ Error al eliminar: {e}")
+            self.session.rollback()
+            return False
 
     # ========== ANÁLISIS Y REPORTES ==========
 
@@ -1555,6 +1975,164 @@ class DatabaseManager:
             results.append(status)
 
         return results
+
+    def check_category_budget_alert(self, category_id: int, year: int, month: int) -> dict:
+        """
+        ✅ NUEVO: Verifica si una categoría está cerca o sobre su límite
+        
+        Args:
+            category_id: ID de la categoría
+            year: Año
+            month: Mes (1-12)
+        
+        Returns:
+            Dict con:
+            - has_alert: bool (True si hay alerta)
+            - alert_type: str ("warning", "danger", "over_budget", "none")
+            - percentage_used: float (% usado del presupuesto)
+            - assigned_amount: float (monto asignado)
+            - spent_amount: float (monto gastado)
+            - remaining: float (monto restante)
+            - message: str (mensaje de la alerta)
+            - icon: str (emoji para la alerta)
+        """
+        from src.data.models import CategoryBudget
+        from sqlalchemy import func, extract
+        
+        try:
+            # Obtener categoría
+            category = self.get_category_by_id(category_id)
+            if not category:
+                return {"has_alert": False, "alert_type": "none", "message": ""}
+            
+            # Obtener presupuesto asignado a esta categoría
+            cat_budget = (
+                self.session.query(CategoryBudget)
+                .filter(
+                    CategoryBudget.year == year,
+                    CategoryBudget.month == month,
+                    CategoryBudget.category_id == category_id
+                )
+                .first()
+            )
+            
+            # Si no hay presupuesto asignado, no hay alerta
+            if not cat_budget or cat_budget.suggested_amount <= 0:
+                return {
+                    "has_alert": False,
+                    "alert_type": "none",
+                    "message": "",
+                    "icon": "",
+                    "percentage_used": 0,
+                    "assigned_amount": 0,
+                    "spent_amount": 0,
+                    "remaining": 0
+                }
+            
+            # Calcular gasto actual en la categoría
+            spent_amount = (
+                self.session.query(func.sum(Transaction.amount))
+                .filter(
+                    Transaction.category_id == category_id,
+                    Transaction.transaction_type == "expense",
+                    extract("year", Transaction.date) == year,
+                    extract("month", Transaction.date) == month
+                )
+                .scalar() or 0.0
+            )
+            
+            assigned_amount = cat_budget.suggested_amount
+            percentage_used = (spent_amount / assigned_amount * 100) if assigned_amount > 0 else 0
+            remaining = assigned_amount - spent_amount
+            
+            # Determinar tipo de alerta
+            if percentage_used >= 100:
+                alert_type = "over_budget"
+                icon = "🚨"
+                message = (
+                    f"¡LÍMITE EXCEDIDO!\n\n"
+                    f"Categoría: {category.name} {category.icon}\n"
+                    f"Presupuesto: {Config.CURRENCY_SYMBOL} {assigned_amount:.2f}\n"
+                    f"Gastado: {Config.CURRENCY_SYMBOL} {spent_amount:.2f}\n"
+                    f"Excedido en: {Config.CURRENCY_SYMBOL} {abs(remaining):.2f} ({percentage_used:.1f}%)"
+                )
+            elif percentage_used >= 90:
+                alert_type = "danger"
+                icon = "⚠️"
+                message = (
+                    f"¡CASI AL LÍMITE!\n\n"
+                    f"Categoría: {category.name} {category.icon}\n"
+                    f"Presupuesto: {Config.CURRENCY_SYMBOL} {assigned_amount:.2f}\n"
+                    f"Gastado: {Config.CURRENCY_SYMBOL} {spent_amount:.2f} ({percentage_used:.1f}%)\n"
+                    f"Disponible: {Config.CURRENCY_SYMBOL} {remaining:.2f}"
+                )
+            elif percentage_used >= 80:
+                alert_type = "warning"
+                icon = "⚡"
+                message = (
+                    f"ACERCÁNDOSE AL LÍMITE\n\n"
+                    f"Categoría: {category.name} {category.icon}\n"
+                    f"Presupuesto: {Config.CURRENCY_SYMBOL} {assigned_amount:.2f}\n"
+                    f"Gastado: {Config.CURRENCY_SYMBOL} {spent_amount:.2f} ({percentage_used:.1f}%)\n"
+                    f"Disponible: {Config.CURRENCY_SYMBOL} {remaining:.2f}"
+                )
+            else:
+                return {
+                    "has_alert": False,
+                    "alert_type": "none",
+                    "message": "",
+                    "icon": "",
+                    "percentage_used": percentage_used,
+                    "assigned_amount": assigned_amount,
+                    "spent_amount": spent_amount,
+                    "remaining": remaining
+                }
+            
+            return {
+                "has_alert": True,
+                "alert_type": alert_type,
+                "percentage_used": percentage_used,
+                "assigned_amount": assigned_amount,
+                "spent_amount": spent_amount,
+                "remaining": remaining,
+                "message": message,
+                "icon": icon,
+                "category_name": category.name,
+                "category_icon": category.icon,
+                "category_color": category.color
+            }
+            
+        except Exception as e:
+            print(f"❌ Error al verificar alerta de categoría: {e}")
+            return {"has_alert": False, "alert_type": "none", "message": ""}
+
+
+    def get_all_category_budget_alerts(self, year: int, month: int) -> list:
+        """
+        ✅ NUEVO: Obtiene todas las alertas de categorías para el mes actual
+        
+        Args:
+            year: Año
+            month: Mes (1-12)
+        
+        Returns:
+            Lista de alertas activas ordenadas por severidad
+        """
+        alerts = []
+        
+        # Obtener todas las categorías de gastos
+        expense_categories = self.get_all_categories("expense")
+        
+        for category in expense_categories:
+            alert = self.check_category_budget_alert(category.id, year, month)
+            if alert["has_alert"]:
+                alerts.append(alert)
+        
+        # Ordenar por severidad: over_budget > danger > warning
+        severity_order = {"over_budget": 0, "danger": 1, "warning": 2}
+        alerts.sort(key=lambda x: severity_order.get(x["alert_type"], 999))
+        
+        return alerts
 
     def close(self):
         """Cierra la conexión a la base de datos"""

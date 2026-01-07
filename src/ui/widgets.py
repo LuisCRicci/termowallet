@@ -12,7 +12,7 @@ por múltiples vistas de la aplicación. Incluye:
 
 import flet as ft
 from datetime import datetime
-from typing import Dict, Callable, Optional
+from typing import Dict, Callable, Optional, List  
 from src.utils.config import Config
 
 
@@ -1096,3 +1096,487 @@ class ColorPickerDialog(ft.AlertDialog):
         v = self.hex_input.value.strip()
         if len(v) == 7 and v.startswith("#"):
             self.pick_color(v)
+            
+"""
+✅ NUEVO WIDGET: CategoryBudgetDistributionEditor
+Agregar a: src/ui/widgets.py (al final del archivo)
+"""
+
+class CategoryBudgetTile(ft.Container):
+    """
+    Tile individual para editar el porcentaje de una categoría
+    
+    Args:
+        category_data: Dict con datos de la categoría
+        on_change: Callback cuando cambia el porcentaje
+    """
+    
+    def __init__(self, category_data: dict, on_change: Callable):  # ✅ Usar dict minúscula
+        self.category_data = category_data
+        self.on_change = on_change
+        
+        # Campo de porcentaje
+        self.percentage_field = ft.TextField(
+            value=str(category_data["percentage"]),
+            width=80,
+            text_align=ft.TextAlign.CENTER,
+            suffix_text="%",
+            keyboard_type=ft.KeyboardType.NUMBER,
+            on_change=self._handle_change,
+            bgcolor=ft.Colors.WHITE,
+        )
+        
+        # Barra de progreso del uso actual
+        usage_percent = category_data.get("usage_percent", 0)
+        is_over = category_data.get("is_over", False)
+        
+        content = ft.Column(
+            [
+                ft.Row(
+                    [
+                        # Ícono de categoría
+                        ft.Container(
+                            content=ft.Text(
+                                category_data["icon"], 
+                                size=24
+                            ),
+                            width=50,
+                            height=50,
+                            bgcolor=f"{category_data['color']}30",
+                            border_radius=25,
+                            alignment=ft.alignment.center,
+                        ),
+                        # Info de categoría
+                        ft.Column(
+                            [
+                                ft.Text(
+                                    category_data["name"],
+                                    size=14,
+                                    weight=ft.FontWeight.BOLD,
+                                ),
+                                ft.Text(
+                                    f"Gastado: {Config.CURRENCY_SYMBOL} {category_data['actual_spent']:.2f}",
+                                    size=11,
+                                    color=ft.Colors.GREY_600,
+                                ),
+                            ],
+                            spacing=2,
+                            expand=True,
+                        ),
+                        # Campo de porcentaje
+                        self.percentage_field,
+                    ],
+                    spacing=10,
+                ),
+                # Barra de uso vs sugerido
+                ft.Column(
+                    [
+                        ft.Row(
+                            [
+                                ft.Text(
+                                    f"Sugerido: {Config.CURRENCY_SYMBOL} {category_data['suggested_amount']:.2f}",
+                                    size=10,
+                                    color=ft.Colors.GREY_600,
+                                ),
+                                ft.Text(
+                                    f"Uso: {usage_percent:.0f}%",
+                                    size=10,
+                                    color="#ef4444" if is_over else "#22c55e",
+                                ),
+                            ],
+                            alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                        ),
+                        ft.ProgressBar(
+                            value=min(usage_percent / 100, 1.0),
+                            color="#ef4444" if is_over else "#22c55e",
+                            bgcolor=ft.Colors.GREY_200,
+                            height=4,
+                        ),
+                    ],
+                    spacing=3,
+                ) if category_data["suggested_amount"] > 0 else ft.Container(),
+            ],
+            spacing=8,
+        )
+        
+        super().__init__(
+            content=content,
+            padding=15,
+            bgcolor=ft.Colors.WHITE,
+            border_radius=10,
+            border=ft.border.all(1, ft.Colors.GREY_300),
+        )
+    
+    def _handle_change(self, e):
+        """Maneja cambios en el campo de porcentaje"""
+        try:
+            new_value = float(self.percentage_field.value or 0)
+            if 0 <= new_value <= 100:
+                self.category_data["percentage"] = new_value
+                if self.on_change:
+                    self.on_change(self.category_data["id"], new_value)
+        except ValueError:
+            pass
+
+
+class CategoryBudgetSummaryCard(ft.Container):
+    """
+    Tarjeta resumen de la distribución porcentual
+    
+    Args:
+        distribution_data: Datos completos de la distribución
+    """
+    
+    def __init__(self, distribution_data: dict):  # ✅ Usar dict minúscula
+        total_pct = distribution_data["total_percentage"]
+        is_valid = distribution_data["is_valid"]
+        base_amount = distribution_data["base_amount"]
+        base_source = distribution_data["base_source"]
+        unassigned = distribution_data.get("unassigned_percentage", 0)
+        
+        # Determinar color y estado
+        if is_valid:
+            status_color = "#22c55e"
+            status_icon = ft.Icons.CHECK_CIRCLE
+            status_text = "✅ Distribución completa"
+        elif total_pct > 100:
+            status_color = "#ef4444"
+            status_icon = ft.Icons.ERROR
+            status_text = f"❌ Excede en {total_pct - 100:.1f}%"
+        else:
+            status_color = "#f59e0b"
+            status_icon = ft.Icons.WARNING
+            status_text = f"⚠️ Falta asignar {unassigned:.1f}%"
+        
+        # Texto de base
+        if base_source == "presupuesto":
+            base_text = f"Base: Presupuesto de gastos ({Config.CURRENCY_SYMBOL} {base_amount:.2f})"
+        elif base_source == "ingresos_reales":
+            base_text = f"Base: Ingresos del mes ({Config.CURRENCY_SYMBOL} {base_amount:.2f})"
+        else:
+            base_text = "⚠️ Sin base configurada (configura presupuesto o espera ingresos)"
+        
+        content = ft.Column(
+            [
+                # Título
+                ft.Row(
+                    [
+                        ft.Icon(
+                            ft.Icons.PIE_CHART,
+                            size=32,
+                            color="#667eea",
+                        ),
+                        ft.Text(
+                            "Distribución de Presupuesto",
+                            size=18,
+                            weight=ft.FontWeight.BOLD,
+                        ),
+                    ],
+                    spacing=10,
+                ),
+                ft.Divider(height=5),
+                # Base y estado
+                ft.Container(
+                    content=ft.Column(
+                        [
+                            ft.Text(
+                                base_text,
+                                size=12,
+                                color=ft.Colors.GREY_700,
+                            ),
+                            ft.Row(
+                                [
+                                    ft.Icon(status_icon, size=20, color=status_color),
+                                    ft.Text(
+                                        status_text,
+                                        size=14,
+                                        weight=ft.FontWeight.BOLD,
+                                        color=status_color,
+                                    ),
+                                ],
+                                spacing=8,
+                            ),
+                        ],
+                        spacing=8,
+                    ),
+                    padding=12,
+                    bgcolor=ft.Colors.GREY_50,
+                    border_radius=8,
+                ),
+                # Indicador visual de porcentaje
+                ft.Column(
+                    [
+                        ft.Row(
+                            [
+                                ft.Text(
+                                    "Total asignado:",
+                                    size=13,
+                                    color=ft.Colors.GREY_600,
+                                ),
+                                ft.Text(
+                                    f"{total_pct:.1f}%",
+                                    size=20,
+                                    weight=ft.FontWeight.BOLD,
+                                    color=status_color,
+                                ),
+                            ],
+                            alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                        ),
+                        ft.ProgressBar(
+                            value=min(total_pct / 100, 1.0),
+                            color=status_color,
+                            bgcolor=ft.Colors.GREY_200,
+                            height=8,
+                        ),
+                    ],
+                    spacing=5,
+                ),
+                # Advertencias
+                *[
+                    ft.Container(
+                        content=ft.Text(
+                            warning,
+                            size=11,
+                            color="#f59e0b",
+                        ),
+                        padding=8,
+                        bgcolor="#fef3c7",
+                        border_radius=6,
+                    )
+                    for warning in distribution_data.get("warnings", [])
+                ],
+            ],
+            spacing=12,
+        )
+        
+        super().__init__(
+            content=content,
+            padding=20,
+            bgcolor=ft.Colors.WHITE,
+            border_radius=12,
+            border=ft.border.all(2, status_color),
+        )
+
+
+class CategoryBudgetDistributionChart(ft.Container):
+    """
+    Gráfico de torta simple para visualizar la distribución
+    
+    Args:
+        categories: Lista de categorías con sus porcentajes
+    """
+    
+    def __init__(self, categories: List[Dict]):
+        # Filtrar solo categorías con porcentaje > 0
+        active_categories = [c for c in categories if c["percentage"] > 0]
+        
+        if not active_categories:
+            content = ft.Column(
+                [
+                    ft.Icon(
+                        ft.Icons.PIE_CHART_OUTLINE,
+                        size=48,
+                        color=ft.Colors.GREY_400,
+                    ),
+                    ft.Text(
+                        "No hay distribución configurada",
+                        size=14,
+                        color=ft.Colors.GREY_600,
+                    ),
+                ],
+                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                spacing=10,
+            )
+        else:
+            # Crear visualización simple con barras
+            bars = []
+            for cat in sorted(active_categories, key=lambda x: x["percentage"], reverse=True):
+                bars.append(
+                    ft.Column(
+                        [
+                            ft.Row(
+                                [
+                                    ft.Text(cat["icon"], size=16),
+                                    ft.Text(
+                                        cat["name"],
+                                        size=12,
+                                        weight=ft.FontWeight.BOLD,
+                                    ),
+                                    ft.Text(
+                                        f"{cat['percentage']:.1f}%",
+                                        size=12,
+                                        color=cat["color"],
+                                    ),
+                                ],
+                                spacing=8,
+                                alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                            ),
+                            # ✅ CORRECCIÓN: Eliminar 'width=None' y 'expand=True'
+                            ft.Container(
+                                height=6,
+                                bgcolor=cat["color"],
+                                border_radius=3,
+                                # Ancho proporcional al porcentaje
+                                width=cat["percentage"] * 3,  # Escala visual (0-300px)
+                            ),
+                        ],
+                        spacing=4,
+                    )
+                )
+            
+            content = ft.Column(
+                [
+                    ft.Text(
+                        "📊 Vista de Distribución",
+                        size=16,
+                        weight=ft.FontWeight.BOLD,
+                    ),
+                    ft.Divider(height=5),
+                    *bars,
+                ],
+                spacing=8,
+            )
+        
+        super().__init__(
+            content=content,
+            padding=15,
+            bgcolor=ft.Colors.GREY_50,
+            border_radius=10,
+        )
+        
+class CategoryBudgetAlertWidget(ft.Container):
+    """
+    Widget compacto que muestra alertas de presupuesto por categoría
+    
+    Args:
+        alerts: Lista de alertas del mes actual
+        on_click: Callback opcional cuando se hace clic en una alerta
+    """
+    
+    def __init__(self, alerts: list, on_click=None):
+        if not alerts:
+            # Sin alertas - mostrar mensaje positivo
+            content = ft.Container(
+                content=ft.Row(
+                    [
+                        ft.Icon(ft.Icons.CHECK_CIRCLE, color="#22c55e", size=24),
+                        ft.Text(
+                            "✅ Todos tus presupuestos están bajo control",
+                            size=13,
+                            color="#22c55e",
+                            weight=ft.FontWeight.BOLD,
+                        ),
+                    ],
+                    spacing=10,
+                ),
+                padding=12,
+                bgcolor="#d1fae5",
+                border_radius=10,
+                border=ft.border.all(1, "#22c55e"),
+            )
+        else:
+            # Con alertas - mostrar resumen
+            alert_tiles = []
+            
+            for alert in alerts[:3]:  # Mostrar máximo 3 alertas
+                # Color según severidad
+                if alert["alert_type"] == "over_budget":
+                    bg_color = "#fee2e2"
+                    border_color = "#ef4444"
+                    text_color = "#991b1b"
+                elif alert["alert_type"] == "danger":
+                    bg_color = "#fef3c7"
+                    border_color = "#f59e0b"
+                    text_color = "#92400e"
+                else:  # warning
+                    bg_color = "#dbeafe"
+                    border_color = "#3b82f6"
+                    text_color = "#1e40af"
+                
+                alert_tiles.append(
+                    ft.Container(
+                        content=ft.Row(
+                            [
+                                ft.Text(alert["icon"], size=20),
+                                ft.Column(
+                                    [
+                                        ft.Text(
+                                            alert["category_name"],
+                                            size=13,
+                                            weight=ft.FontWeight.BOLD,
+                                            color=text_color,
+                                        ),
+                                        ft.Text(
+                                            f"{alert['percentage_used']:.0f}% usado - "
+                                            f"{Config.CURRENCY_SYMBOL} {abs(alert['remaining']):.2f} "
+                                            f"{'disponible' if alert['remaining'] >= 0 else 'excedido'}",
+                                            size=11,
+                                            color=text_color,
+                                        ),
+                                    ],
+                                    spacing=2,
+                                    expand=True,
+                                ),
+                                ft.Container(
+                                    content=ft.Text(
+                                        f"{alert['percentage_used']:.0f}%",
+                                        size=16,
+                                        weight=ft.FontWeight.BOLD,
+                                        color=text_color,
+                                    ),
+                                ),
+                            ],
+                            spacing=10,
+                        ),
+                        padding=10,
+                        bgcolor=bg_color,
+                        border_radius=8,
+                        border=ft.border.all(1, border_color),
+                        margin=ft.margin.only(bottom=5),
+                        ink=True,
+                        on_click=on_click if on_click else None,
+                    )
+                )
+            
+            # Mensaje de más alertas si hay
+            if len(alerts) > 3:
+                alert_tiles.append(
+                    ft.Container(
+                        content=ft.Text(
+                            f"+ {len(alerts) - 3} alerta(s) más",
+                            size=11,
+                            color=ft.Colors.GREY_600,
+                            text_align=ft.TextAlign.CENTER,
+                            italic=True,
+                        ),
+                        padding=5,
+                    )
+                )
+            
+            content = ft.Column(
+                [
+                    ft.Row(
+                        [
+                            ft.Icon(ft.Icons.WARNING_AMBER, color="#f59e0b", size=20),
+                            ft.Text(
+                                f"⚡ {len(alerts)} Alerta(s) de Presupuesto",
+                                size=14,
+                                weight=ft.FontWeight.BOLD,
+                                color="#92400e",
+                            ),
+                        ],
+                        spacing=8,
+                    ),
+                    ft.Container(height=5),
+                    *alert_tiles,
+                ],
+                spacing=5,
+            )
+        
+        super().__init__(
+            content=content,
+            padding=15,
+            bgcolor=ft.Colors.WHITE,
+            border_radius=12,
+            border=ft.border.all(1, ft.Colors.GREY_200),
+        )

@@ -125,3 +125,46 @@ class MonthlyBudget(Base):
     def __repr__(self):
         return f"<MonthlyBudget(year={self.year}, month={self.month})>"
     
+    
+    
+    
+    
+class CategoryBudget(Base):
+    """
+    Modelo para distribución porcentual del presupuesto por categoría
+    
+    Permite asignar un porcentaje del presupuesto mensual a cada categoría.
+    La suma de todos los porcentajes debe ser 100%.
+    """
+    
+    __tablename__ = "category_budgets"
+    
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    year: Mapped[int] = mapped_column(Integer, index=True)
+    month: Mapped[int] = mapped_column(Integer, index=True)
+    category_id: Mapped[int] = mapped_column(ForeignKey("categories.id"))
+    
+    # Porcentaje asignado (0-100)
+    percentage: Mapped[float] = mapped_column(Float, default=0.0)
+    
+    # Monto sugerido (calculado automáticamente)
+    suggested_amount: Mapped[Optional[float]] = mapped_column(Float, default=0.0)
+    
+    # Notas específicas para esta categoría en este mes
+    notes: Mapped[Optional[str]] = mapped_column(String(500), default=None)
+    
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, default=datetime.now, onupdate=datetime.now
+    )
+    
+    # Relación con categoría
+    category: Mapped["Category"] = relationship("Category")
+    
+    # Constraint: Una categoría solo puede tener un porcentaje por mes
+    __table_args__ = (
+        UniqueConstraint('year', 'month', 'category_id', name='unique_category_month'),
+    )
+    
+    def __repr__(self):
+        return f"<CategoryBudget(year={self.year}, month={self.month}, category_id={self.category_id}, percentage={self.percentage}%)>"

@@ -6,6 +6,7 @@ Archivo: src/data/models.py
 import os
 import sys
 
+
 # Agregar el directorio raíz del proyecto al path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from datetime import datetime
@@ -21,7 +22,7 @@ from sqlalchemy import (
     Text,  # ✅ NUEVO: Para almacenar keywords como JSON/texto
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
-
+from sqlalchemy import UniqueConstraint
 
 class Base(DeclarativeBase):
     pass
@@ -123,3 +124,4 @@ class MonthlyBudget(Base):
 
     def __repr__(self):
         return f"<MonthlyBudget(year={self.year}, month={self.month})>"
+    

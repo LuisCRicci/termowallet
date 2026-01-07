@@ -365,7 +365,7 @@ print(f"✅ {updated_count} categorías actualizadas...")
 
 
 
-## ⚕️ Teting 
+## ⚕️ Testing 
 
 ```bash
 export PYTHONPATH="${PYTHONPATH}:/home/gandalf/Projects/mobile/termowallet"

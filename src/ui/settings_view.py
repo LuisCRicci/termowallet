@@ -1,6 +1,13 @@
 """
 Vista de configuración y gestión de datos
 Archivo: src/ui/settings_view.py
+
+✅ INCLUYE:
+- Gestión de base de datos
+- Cambio de contraseña con validación
+- Restauración de keywords
+- Sistema de seguridad completo
+
 """
 
 import flet as ft
@@ -294,6 +301,138 @@ class SettingsView(BaseView):
         
         self.refresh()
         self.page.update()
+    
+    # ================================
+    # ✅ NUEVO: Funcionalidad de cambio de contraseña
+    # ================================
+    def show_change_password_dialog(self, e=None):
+        """✅ NUEVO: Diálogo para cambiar contraseña"""
+        from src.business.auth_manager import AuthManager
+        
+        # Inicializar auth manager
+        auth = AuthManager(self.db)
+        
+        # Campos
+        current_password = ft.TextField(
+            label="Contraseña Actual",
+            password=True,
+            can_reveal_password=True,
+            prefix_icon=ft.Icons.LOCK,
+            autofocus=True,
+        )
+        
+        new_password = ft.TextField(
+            label="Nueva Contraseña",
+            password=True,
+            can_reveal_password=True,
+            prefix_icon=ft.Icons.LOCK_OUTLINE,
+            hint_text="Mínimo 4 caracteres",
+        )
+        
+        confirm_password = ft.TextField(
+            label="Confirmar Nueva Contraseña",
+            password=True,
+            can_reveal_password=True,
+            prefix_icon=ft.Icons.LOCK_OUTLINE,
+        )
+        
+        message_text = ft.Text("", size=12, visible=False)
+        
+        def handle_change(e):
+            # Validaciones
+            if not current_password.value or not new_password.value or not confirm_password.value:
+                message_text.value = "❌ Complete todos los campos"
+                message_text.color = "#ef4444"
+                message_text.visible = True
+                self.page.update()
+                return
+            
+            if len(new_password.value) < 4:
+                message_text.value = "❌ La nueva contraseña debe tener al menos 4 caracteres"
+                message_text.color = "#ef4444"
+                message_text.visible = True
+                self.page.update()
+                return
+            
+            if new_password.value != confirm_password.value:
+                message_text.value = "❌ Las nuevas contraseñas no coinciden"
+                message_text.color = "#ef4444"
+                message_text.visible = True
+                self.page.update()
+                return
+            
+            # Cambiar contraseña
+            success, msg = auth.change_password(current_password.value, new_password.value)
+            
+            if success:
+                self.close_dialog()
+                self.show_snackbar("✅ Contraseña cambiada correctamente")
+            else:
+                message_text.value = f"❌ {msg}"
+                message_text.color = "#ef4444"
+                message_text.visible = True
+                self.page.update()
+        
+        dialog = ft.AlertDialog(
+            title=ft.Row(
+                [
+                    ft.Icon(ft.Icons.LOCK_RESET, color="#667eea", size=28),
+                    ft.Text("Cambiar Contraseña", size=18, weight=ft.FontWeight.BOLD),
+                ],
+                spacing=10,
+            ),
+            content=ft.Container(
+                content=ft.Column(
+                    [
+                        # Advertencia
+                        ft.Container(
+                            content=ft.Row(
+                                [
+                                    ft.Icon(ft.Icons.INFO_OUTLINE, color="#3b82f6", size=20),
+                                    ft.Text(
+                                        "Recuerde su nueva contraseña.\n"
+                                        "Después de 7 intentos fallidos,\n"
+                                        "todos los datos serán eliminados.",
+                                        size=11,
+                                        color=ft.Colors.GREY_700,
+                                    ),
+                                ],
+                                spacing=10,
+                            ),
+                            padding=10,
+                            bgcolor="#eff6ff",
+                            border_radius=8,
+                            margin=ft.margin.only(bottom=20),
+                        ),
+                        
+                        # Campos
+                        current_password,
+                        ft.Container(height=10),
+                        new_password,
+                        ft.Container(height=10),
+                        confirm_password,
+                        ft.Container(height=10),
+                        message_text,
+                    ],
+                    spacing=0,
+                ),
+                width=400,
+            ),
+            actions=[
+                ft.TextButton("Cancelar", on_click=lambda _: self.close_dialog()),
+                ft.ElevatedButton(
+                    "Cambiar Contraseña",
+                    icon=ft.Icons.CHECK,
+                    on_click=handle_change,
+                    style=ft.ButtonStyle(
+                        bgcolor="#667eea",
+                        color=ft.Colors.WHITE,
+                    ),
+                ),
+            ],
+        )
+        
+        self.show_dialog(dialog)
 
     def build(self) -> ft.Control:
         """Construye la vista de configuración"""
@@ -362,6 +501,45 @@ class SettingsView(BaseView):
             padding=20,
             bgcolor=ft.Colors.WHITE,
             border_radius=10,
+        )
+
+        # ================================
+        # ✅ NUEVO: Sección de Seguridad
+        # ================================
+        security_section = ft.Container(
+            content=ft.Column(
+                [
+                    ft.Row(
+                        [
+                            ft.Icon(ft.Icons.SECURITY, size=22, color="#8b5cf6"),
+                            ft.Text(
+                                "🔐 Seguridad",
+                                size=18,
+                                weight=ft.FontWeight.BOLD,
+                            ),
+                        ],
+                        spacing=8,
+                    ),
+                    ft.Divider(height=10),
+                    ft.ListTile(
+                        leading=ft.Icon(ft.Icons.LOCK_RESET, color="#667eea"),
+                        title=ft.Text("Cambiar Contraseña"),
+                        subtitle=ft.Text("Actualice su contraseña de acceso"),
+                        on_click=self.show_change_password_dialog,
+                        hover_color="#f3f4f6",
+                    ),
+                    ft.ListTile(
+                        leading=ft.Icon(ft.Icons.INFO_OUTLINE, color="#3b82f6"),
+                        title=ft.Text("Protección de Datos"),
+                        subtitle=ft.Text("Encriptación AES-256 · 7 intentos máx."),
+                        hover_color="#f3f4f6",
+                    ),
+                ],
+                spacing=10,
+            ),
+            padding=20,
+            bgcolor=ft.Colors.WHITE,
+            border_radius=12,
         )
 
         clean_transactions_btn = ft.Container(
@@ -560,6 +738,9 @@ class SettingsView(BaseView):
                 ft.Divider(),
                 stats_card,
                 ft.Container(height=10),
+                # ✅ NUEVO: Sección de seguridad insertada aquí
+                security_section,
+                ft.Container(height=15),
                 ft.Text("🗑️ Gestión de Datos", size=18, weight=ft.FontWeight.BOLD),
                 warning_card,
                 ft.Container(height=10),

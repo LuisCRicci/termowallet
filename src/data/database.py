@@ -899,19 +899,7 @@ class DatabaseManager:
         """
         Obtiene distribución completa con cálculos y validaciones
         
-        Args:
-            year: Año
-            month: Mes (1-12)
-        
-        Returns:
-            Dict con:
-            - total_percentage: Suma de porcentajes
-            - is_valid: Si suma 100%
-            - base_amount: Monto base (presupuesto o ingresos)
-            - base_source: Origen del monto base
-            - categories: Lista con datos de cada categoría
-            - warnings: Alertas si hay problemas
-            - unassigned_percentage: Porcentaje sin asignar
+        ✅ CORREGIDO: Tolerancia de 1% para redondeo (99% - 101%)
         """
         from src.data.models import CategoryBudget
         
@@ -984,16 +972,19 @@ class DatabaseManager:
                 "usage_percent": (actual_spent / calculated_amount * 100) if calculated_amount > 0 else 0,
             })
         
-        # Validaciones y advertencias
+        # ✅ VALIDACIONES MEJORADAS con tolerancia
         warnings = []
-        is_valid = abs(total_percentage - 100.0) < 0.01  # Tolerancia de 0.01%
+        
+        # ✅ NUEVO: Tolerancia de 1% para redondeo (99% a 101% es válido)
+        is_valid = 99.0 <= total_percentage <= 101.0
         
         if base_amount == 0:
             warnings.append("⚠️ No hay presupuesto ni ingresos configurados como base")
         
-        if total_percentage < 100:
+        # Solo advertir si está significativamente por debajo
+        if total_percentage < 99.0:
             warnings.append(f"⚠️ Falta asignar {100 - total_percentage:.1f}% del presupuesto")
-        elif total_percentage > 100:
+        elif total_percentage > 101.0:
             warnings.append(f"⚠️ Se ha excedido {total_percentage - 100:.1f}% del 100%")
         
         if len([c for c in categories_data if c["percentage"] == 0]) > 0:
@@ -1113,18 +1104,30 @@ class DatabaseManager:
             - message: str
         """
         try:
-            # Validar que la suma sea 100%
+            # Validar que la suma esté en el rango válido
             total = sum(percentages.values())
-            is_valid = abs(total - 100.0) < 0.01
+            
+            # ✅ NUEVA VALIDACIÓN: Tolerancia de 99% a 101%
+            is_valid = 99.0 <= total <= 101.0
             
             if not is_valid:
-                return {
-                    "success": False,
-                    "total_percentage": total,
-                    "is_valid": False,
-                    "updated_count": 0,
-                    "message": f"La suma debe ser 100%, actualmente es {total:.1f}%"
-                }
+                # Solo rechazar si está muy fuera del rango
+                if total > 101.0:
+                    return {
+                        "success": False,
+                        "total_percentage": total,
+                        "is_valid": False,
+                        "updated_count": 0,
+                        "message": f"La suma excede el 101%, actualmente es {total:.1f}%"
+                    }
+                elif total < 99.0:
+                    return {
+                        "success": False,
+                        "total_percentage": total,
+                        "is_valid": False,
+                        "updated_count": 0,
+                        "message": f"La suma está muy por debajo, actualmente es {total:.1f}%"
+                    }
             
             # Actualizar cada categoría
             updated_count = 0
@@ -1132,12 +1135,20 @@ class DatabaseManager:
                 if self.update_category_budget(year, month, cat_id, percentage):
                     updated_count += 1
             
+            # ✅ MENSAJE MEJORADO según el total
+            if 99.0 <= total < 99.5:
+                message = f"✅ {updated_count} categorías actualizadas ({total:.1f}% - redondeo aceptable)"
+            elif 100.5 < total <= 101.0:
+                message = f"✅ {updated_count} categorías actualizadas ({total:.1f}% - redondeo aceptable)"
+            else:
+                message = f"✅ {updated_count} categorías actualizadas correctamente"
+            
             return {
                 "success": True,
                 "total_percentage": total,
                 "is_valid": True,
                 "updated_count": updated_count,
-                "message": f"✅ {updated_count} categorías actualizadas correctamente"
+                "message": message
             }
             
         except Exception as e:
@@ -1170,23 +1181,37 @@ class DatabaseManager:
             if not expense_categories:
                 return False
             
-            # Calcular porcentaje equitativo
-            equal_percentage = 100.0 / len(expense_categories)
+            num_categories = len(expense_categories)
             
-            # Asignar a cada categoría
-            for cat in expense_categories:
-                self.update_category_budget(
-                    year, month, cat.id, 
-                    round(equal_percentage, 2)
-                )
+            # Calcular porcentaje base
+            base_percentage = 100.0 / num_categories
             
-            print(f"✅ {len(expense_categories)} categorías inicializadas con {equal_percentage:.2f}% cada una")
+            # ✅ CORRECCIÓN: Acumular correctamente
+            total_assigned = 0.0
+            
+            for idx, cat in enumerate(expense_categories):
+                if idx == num_categories - 1:
+                    # Última categoría: asignar lo que falta para llegar exactamente a 100%
+                    percentage = round(100.0 - total_assigned, 2)
+                    print(f"  📊 {cat.name}: {percentage}% (ajuste final)")
+                else:
+                    # Otras categorías: redondear a 2 decimales
+                    percentage = round(base_percentage, 2)
+                    total_assigned += percentage  # ✅ CRÍTICO: Acumular AQUÍ
+                    print(f"  📊 {cat.name}: {percentage}%")
+                
+                # Guardar en BD
+                self.update_category_budget(year, month, cat.id, percentage)
+            
+            print(f"✅ {num_categories} categorías inicializadas equitativamente")
+            print(f"   Total asignado: {total_assigned + percentage:.2f}%")
             return True
             
         except Exception as e:
             print(f"❌ Error al inicializar: {e}")
+            import traceback
+            traceback.print_exc()
             return False
-
 
     def initialize_category_budgets_smart(self, year: int, month: int) -> bool:
         """
@@ -1229,24 +1254,86 @@ class DatabaseManager:
             
             if grand_total == 0:
                 # Si no hay historial, usar distribución equitativa
+                print("⚠️ No hay historial, usando distribución equitativa")
                 return self.initialize_category_budgets_equal(year, month)
             
-            # Calcular porcentajes basados en historial
-            for cat in expense_categories:
-                percentage = (category_totals[cat.id] / grand_total * 100)
-                self.update_category_budget(
-                    year, month, cat.id,
-                    round(percentage, 2)
-                )
+            # ✅ Calcular porcentajes iniciales
+            percentages_list = []
+            total_assigned = 0.0
             
-            print(f"✅ Distribución inteligente aplicada basada en {grand_total:.2f} de gastos históricos")
+            for cat in expense_categories:
+                if category_totals[cat.id] > 0:
+                    pct = (category_totals[cat.id] / grand_total * 100)
+                    pct_rounded = round(pct, 2)
+                else:
+                    pct_rounded = 0.0
+                
+                percentages_list.append({
+                    'id': cat.id,
+                    'name': cat.name,
+                    'percentage': pct_rounded
+                })
+                total_assigned += pct_rounded
+            
+            # ✅ Ajustar para llegar a 100%
+            difference = round(100.0 - total_assigned, 2)
+            
+            if difference != 0:
+                # Ordenar por porcentaje descendente
+                percentages_list.sort(key=lambda x: x['percentage'], reverse=True)
+                
+                # Ajustar la categoría con mayor porcentaje
+                if percentages_list:
+                    percentages_list[0]['percentage'] = round(
+                        percentages_list[0]['percentage'] + difference, 
+                        2
+                    )
+                    print(f"  🔧 Ajuste de {difference:.2f}% aplicado a {percentages_list[0]['name']}")
+            
+            # Asignar a BD
+            for item in percentages_list:
+                self.update_category_budget(
+                    year, month, 
+                    item['id'], 
+                    item['percentage']
+                )
+                print(f"  📊 {item['name']}: {item['percentage']}%")
+            
+            final_total = sum(item['percentage'] for item in percentages_list)
+            print(f"✅ Distribución inteligente aplicada")
+            print(f"   Base histórica: S/ {grand_total:.2f}")
+            print(f"   Total asignado: {final_total:.2f}%")
             return True
             
         except Exception as e:
             print(f"❌ Error en inicialización inteligente: {e}")
+            import traceback
+            traceback.print_exc()
             # Fallback a distribución equitativa
             return self.initialize_category_budgets_equal(year, month)
 
+    # ✅ OPCIONAL: Método de prueba para verificar
+    def test_distribution(self, year: int, month: int):
+        """
+        Método de prueba para verificar la distribución
+        Puedes llamarlo después de inicializar para debug
+        """
+        budgets = self.get_category_budgets(year, month)
+        
+        print("\n" + "="*50)
+        print("🔍 VERIFICACIÓN DE DISTRIBUCIÓN")
+        print("="*50)
+        
+        total = 0.0
+        for budget in budgets:
+            cat = self.get_category_by_id(budget.category_id)
+            print(f"  {cat.name}: {budget.percentage:.2f}%")
+            total += budget.percentage
+        
+        print("-"*50)
+        print(f"  TOTAL: {total:.2f}%")
+        print(f"  VÁLIDO: {'✅ SÍ' if 99.0 <= total <= 101.0 else '❌ NO'}")
+        print("="*50 + "\n")
 
     def delete_category_budgets(self, year: int, month: int) -> bool:
         """

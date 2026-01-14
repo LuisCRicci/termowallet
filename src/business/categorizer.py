@@ -67,6 +67,13 @@ class TransactionCategorizer:
                 "cosmetico","perfume","maquillaje","makeup","accesorio","accessory","reloj","watch","joya","jewelry",
                 "regalo","gift",
             ],
+            "Belleza": [
+                "Cremas","clothes","zapateria","shoes","tienda","store","mall","plaza","boutique","zara","h&m","forever21",
+                "saga","ripley", "falabella", "oechsle", "paris","amazon","ebay","mercadolibre","jockey","real plaza",
+                "cosmetico","perfume","maquillaje","makeup","accesorio","accessory","reloj","watch","joya","jewelry",
+                "regalo","gift",
+            ],
+            
             "Otros Gastos": [],  # Categoría por defecto para gastos
         }
 

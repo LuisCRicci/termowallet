@@ -1227,26 +1227,39 @@ class CategoryBudgetSummaryCard(ft.Container):
         distribution_data: Datos completos de la distribución
     """
     
-    def __init__(self, distribution_data: dict):  # ✅ Usar dict minúscula
+    def __init__(self, distribution_data: dict):
         total_pct = distribution_data["total_percentage"]
         is_valid = distribution_data["is_valid"]
         base_amount = distribution_data["base_amount"]
         base_source = distribution_data["base_source"]
         unassigned = distribution_data.get("unassigned_percentage", 0)
         
-        # Determinar color y estado
-        if is_valid:
-            status_color = "#22c55e"
-            status_icon = ft.Icons.CHECK_CIRCLE
-            status_text = "✅ Distribución completa"
-        elif total_pct > 100:
+        # ✅ NUEVA LÓGICA: Determinar color y estado con tolerancia
+        if 99.0 <= total_pct <= 101.0:
+            # Dentro del rango aceptable
+            if 99.5 <= total_pct <= 100.5:
+                # Perfecto o casi perfecto
+                status_color = "#22c55e"
+                status_icon = ft.Icons.CHECK_CIRCLE
+                status_text = "✅ Distribución completa"
+            else:
+                # Aceptable con redondeo
+                status_color = "#22c55e"
+                status_icon = ft.Icons.CHECK_CIRCLE_OUTLINE
+                if total_pct < 99.5:
+                    status_text = f"✅ Distribución válida ({total_pct:.1f}% - redondeo)"
+                else:
+                    status_text = f"✅ Distribución válida ({total_pct:.1f}% - redondeo)"
+        elif total_pct > 101.0:
+            # Excede el límite
             status_color = "#ef4444"
             status_icon = ft.Icons.ERROR
             status_text = f"❌ Excede en {total_pct - 100:.1f}%"
         else:
+            # Muy por debajo
             status_color = "#f59e0b"
             status_icon = ft.Icons.WARNING
-            status_text = f"⚠️ Falta asignar {unassigned:.1f}%"
+            status_text = f"⚠️ Falta asignar {100 - total_pct:.1f}%"
         
         # Texto de base
         if base_source == "presupuesto":
@@ -1330,6 +1343,22 @@ class CategoryBudgetSummaryCard(ft.Container):
                         ),
                     ],
                     spacing=5,
+                ),
+                # ✅ NUEVO: Info sobre tolerancia
+                (
+                    ft.Container(
+                        content=ft.Text(
+                            "💡 Redondeos entre 99%-101% son aceptables",
+                            size=10,
+                            color=ft.Colors.GREY_600,
+                            italic=True,
+                        ),
+                        padding=8,
+                        bgcolor=ft.Colors.BLUE_50,
+                        border_radius=6,
+                    )
+                    if 99.0 <= total_pct <= 101.0 and not (99.5 <= total_pct <= 100.5)
+                    else ft.Container()
                 ),
                 # Advertencias
                 *[

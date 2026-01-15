@@ -16,6 +16,7 @@ class AddTransactionView(BaseView):
     def __init__(self, page: ft.Page, db_manager, show_snackbar_callback):
         super().__init__(page, db_manager, show_snackbar_callback)
         self.processor = TransactionProcessor()
+        self.is_saving = False
         self._init_fields()
 
     def _init_fields(self):
@@ -35,6 +36,7 @@ class AddTransactionView(BaseView):
             keyboard_type=ft.KeyboardType.NUMBER,
             hint_text="0.00",
             bgcolor=ft.Colors.WHITE,
+            autofocus=True, # ✅ NUEVO: Focus en monto al abrir
         )
 
         self.description_field = ft.TextField(
@@ -44,14 +46,19 @@ class AddTransactionView(BaseView):
             bgcolor=ft.Colors.WHITE,
         )
 
+        # ✅ CORREGIDO: Usar TextField simple con valor inicial
         self.date_field = ft.TextField(
             label="Fecha",
             value=datetime.now().strftime("%Y-%m-%d"),
             read_only=True,
             on_click=self.pick_date,
             bgcolor=ft.Colors.WHITE,
+            suffix_icon=ft.Icons.CALENDAR_TODAY,
         )
 
+         # ✅ NUEVO: Almacenar la fecha real en una variable
+        self.selected_date = datetime.now()
+        
         self.category_dropdown = ft.Dropdown(
             label="Categoría",
             options=[],
@@ -103,11 +110,13 @@ class AddTransactionView(BaseView):
         self.page.update()
 
     def save_transaction(self, e):
-        """✅ ACTUALIZADO: Guarda la transacción y muestra alertas de presupuesto"""
+        """✅ COMPLETAMENTE CORREGIDO: Guarda la transacción con campos correctos"""
+        
+        # ✅ Prevenir doble guardado
         if self.is_saving:
             return
-
-        # Validaciones
+        
+        # Validaciones básicas
         if not self.amount_field.value or self.amount_field.value.strip() == "":
             self.show_snackbar("El monto es obligatorio", error=True)
             return
@@ -128,14 +137,26 @@ class AddTransactionView(BaseView):
         self.is_saving = True
 
         try:
-            # Obtener valores
+            # ✅ CORREGIDO: Obtener valores de los campos correctos
             description = self.description_field.value.strip()
             category_id = int(self.category_dropdown.value)
-            transaction_type = self.type_dropdown.value
+            
+            # ✅ CORREGIDO: Determinar tipo de transacción desde las tabs
+            transaction_type = "expense" if self.transaction_type_tabs.selected_index == 0 else "income"
+            
+            # ✅ CORREGIDO: Usar la fecha almacenada
+            date = self.selected_date
+            
             notes = self.notes_field.value.strip() if self.notes_field.value else None
-            date = self.date_picker.value
 
-            # Guardar transacción
+            # ✅ Guardar transacción en BD
+            print(f"\n📝 GUARDANDO TRANSACCIÓN:")
+            print(f"   Fecha: {date.strftime('%Y-%m-%d')}")
+            print(f"   Descripción: {description}")
+            print(f"   Monto: {amount}")
+            print(f"   Tipo: {transaction_type}")
+            print(f"   Categoría ID: {category_id}")
+            
             self.db.add_transaction(
                 date=date,
                 description=description,
@@ -146,7 +167,7 @@ class AddTransactionView(BaseView):
                 source="manual",
             )
 
-            # ✅ NUEVO: Verificar alertas de presupuesto SOLO para gastos
+            # ✅ Verificar alertas de presupuesto SOLO para gastos
             if transaction_type == "expense":
                 alert = self.db.check_category_budget_alert(
                     category_id, 
@@ -164,15 +185,24 @@ class AddTransactionView(BaseView):
                 # Para ingresos, mostrar mensaje normal
                 self.show_snackbar("✅ Ingreso registrado exitosamente")
 
-            # Limpiar campos
+            # ✅ Limpiar campos después de guardar
             self.amount_field.value = ""
             self.description_field.value = ""
             self.notes_field.value = ""
+            self.selected_date = datetime.now()
+            self.date_field.value = self.selected_date.strftime("%Y-%m-%d")
+            
+            # ✅ Volver a poner focus en el campo de monto
             self.amount_field.focus()
             
             self.page.update()
+            
+            print("✅ Transacción guardada correctamente\n")
 
         except Exception as ex:
+            import traceback
+            print(f"\n❌ ERROR AL GUARDAR TRANSACCIÓN:")
+            print(traceback.format_exc())
             self.show_snackbar(f"Error: {str(ex)}", error=True)
         finally:
             self.is_saving = False
@@ -386,7 +416,7 @@ class AddTransactionView(BaseView):
         self.show_dialog(dialog)
 
 
-    # ✅ AGREGAR TAMBIÉN: Método para mostrar resumen de alertas en la vista principal
+    # ✅✅✅✅ SIN USAR AUN: Método para mostrar resumen de alertas en la vista principal 
 
     def show_all_alerts_summary(self, e):
         """
@@ -598,11 +628,7 @@ class AddTransactionView(BaseView):
             import traceback
             traceback.print_exc()
             self.show_snackbar(f"Error al importar: {str(ex)}", error=True)
-
-
-
-
-
+            
 
     def build(self) -> ft.Control:
         """Construye la vista"""

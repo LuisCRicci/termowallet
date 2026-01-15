@@ -736,7 +736,19 @@ class CategoriesView(BaseView):
                 
                 self.close_dialog()
                 self.show_snackbar("✅ Categoría creada exitosamente")
-                self._reload_view()
+                
+                # ✅ NUEVO: Verificar si hay distribución configurada
+                if category.category_type == "expense":
+                    now = datetime.now()
+                    distribution = self.db.get_category_budget_distribution(now.year, now.month)
+                    
+                    # Si hay configuración existente, preguntar si quiere actualizar
+                    if distribution['total_percentage'] > 0:
+                        self._show_update_distribution_prompt(category, now.month, now.year)
+                    else:
+                        self._reload_view()
+                else:
+                    self._reload_view()
                 
             except Exception as ex:
                 self.show_snackbar(f"Error: {str(ex)}", error=True)
@@ -1179,7 +1191,7 @@ class CategoriesView(BaseView):
 
     def show_budget_distribution_dialog(self, e, current_month: int, current_year: int):
         """
-        Muestra diálogo para configurar la distribución porcentual del presupuesto
+        Muestra diálogo para configurar la distribución porcentual del presupuesto por categorías
         
         Args:
             current_month: Mes actual
@@ -1330,7 +1342,7 @@ class CategoriesView(BaseView):
                 [
                     ft.Icon(ft.Icons.PIE_CHART, size=28, color="#667eea"),
                     ft.Text(
-                        f"Distribución de Presupuesto - {current_month}/{current_year}",
+                        f"Presupuesto por Categoría - {current_month}/{current_year}",
                         size=18,
                         weight=ft.FontWeight.BOLD,
                     ),
@@ -1487,7 +1499,7 @@ class CategoriesView(BaseView):
         
         self.show_dialog(dialog)
 
-# ✅ CORRECCIÓN: Método build() al NIVEL DE LA CLASE
+    # ✅ CORRECCIÓN: Método build() al NIVEL DE LA CLASE
     def build(self) -> ft.Control:
         """
         ✅ VERSIÓN ACTUALIZADA: Con gestión de distribución porcentual
@@ -1541,7 +1553,7 @@ class CategoriesView(BaseView):
                         ),
                         # Botón de distribución
                         ft.ElevatedButton(
-                            "Distribución de Presupuesto",
+                            "Distribución por Categoría",
                             icon=ft.Icons.PIE_CHART,
                             on_click=lambda e: self.show_budget_distribution_dialog(
                                 e, current_month, current_year
@@ -1602,7 +1614,7 @@ class CategoriesView(BaseView):
                 ft.Container(
                     content=ft.Text(
                         "💡 Tip: Haz clic en 🏷️ para gestionar palabras clave | "
-                        "Usa 'Distribución de Presupuesto' para asignar porcentajes",
+                        "Usa 'Distribución por Categoría' para asignar porcentajes",
                         size=12,
                         color=ft.Colors.GREY_600,
                         italic=True,

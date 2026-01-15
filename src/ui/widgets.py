@@ -1280,7 +1280,7 @@ class CategoryBudgetSummaryCard(ft.Container):
                             color="#667eea",
                         ),
                         ft.Text(
-                            "Distribución de Presupuesto",
+                            "Distribución por Categoría",
                             size=18,
                             weight=ft.FontWeight.BOLD,
                         ),

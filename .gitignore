@@ -11,4 +11,5 @@ src/storage/*
 None
 assets/
 build/*
+src/build/*
 requirements.txt.backup

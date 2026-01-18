@@ -1,29 +1,23 @@
 """
-Gestor de Autenticación con Encriptación AES-256
+Gestor de Autenticación con Hashing Seguro PBKDF2
 Archivo: src/business/auth_manager.py
 
+✅ COMPLETAMENTE REESCRITO - Sin dependencia de cryptography
 Sistema de login seguro con:
-- Encriptación AES-256 para contraseñas
+- Hashing PBKDF2-HMAC-SHA256 (100,000 iteraciones)
 - Contador de intentos fallidos
 - Reseteo automático de BD al 7º intento fallido
 """
 
 import os
 import hashlib
+import binascii
 from typing import Optional, Tuple
-from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
-from cryptography.hazmat.backends import default_backend
-from cryptography.hazmat.primitives import padding
-import base64
-from sqlalchemy import text  # ✅ NUEVO: Importar text para SQLAlchemy 2.0
+from sqlalchemy import text
 
 
 class AuthManager:
-    """Maneja la autenticación y encriptación de contraseñas"""
-    
-    # Clave maestra derivada del dispositivo (32 bytes para AES-256)
-    # En producción, esto debería derivarse de un secret único del dispositivo
-    MASTER_KEY = hashlib.sha256(b"TermoWallet_Master_Secret_Key_2024").digest()
+    """Maneja la autenticación usando Hashing Seguro (PBKDF2)"""
     
     def __init__(self, db_manager):
         self.db = db_manager
@@ -37,7 +31,6 @@ class AuthManager:
                 CREATE TABLE IF NOT EXISTS auth_config (
                     id INTEGER PRIMARY KEY CHECK (id = 1),
                     password_hash TEXT NOT NULL,
-                    iv TEXT NOT NULL,
                     failed_attempts INTEGER DEFAULT 0,
                     is_locked BOOLEAN DEFAULT 0,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -50,71 +43,65 @@ class AuthManager:
         except Exception as e:
             print(f"⚠️ Tabla auth_config ya existe o error: {e}")
     
-    def _encrypt_password(self, password: str) -> Tuple[str, str]:
+    def _hash_password(self, password: str, salt: bytes = None) -> str:
         """
-        Encripta una contraseña usando AES-256-CBC
+        Hashea una contraseña usando PBKDF2-HMAC-SHA256
         
         Args:
             password: Contraseña en texto plano
-            
-        Returns:
-            Tupla (encrypted_base64, iv_base64)
-        """
-        # Generar IV aleatorio (16 bytes para AES)
-        iv = os.urandom(16)
+            salt: Salt opcional (se genera si no se provee)
         
-        # Crear cipher con AES-256-CBC
-        cipher = Cipher(
-            algorithms.AES(self.MASTER_KEY),
-            modes.CBC(iv),
-            backend=default_backend()
+        Returns:
+            str: "salt_hex$hash_hex"
+        """
+        if salt is None:
+            salt = os.urandom(16)  # 16 bytes de salt aleatorio
+        
+        # 100,000 iteraciones de PBKDF2 con SHA256
+        pwd_hash = hashlib.pbkdf2_hmac(
+            'sha256',
+            password.encode('utf-8'),
+            salt,
+            100000
         )
         
-        # Padding PKCS7
-        padder = padding.PKCS7(128).padder()
-        padded_data = padder.update(password.encode('utf-8')) + padder.finalize()
+        # Convertir a hexadecimal
+        salt_hex = binascii.hexlify(salt).decode('ascii')
+        hash_hex = binascii.hexlify(pwd_hash).decode('ascii')
         
-        # Encriptar
-        encryptor = cipher.encryptor()
-        encrypted = encryptor.update(padded_data) + encryptor.finalize()
-        
-        # Convertir a base64 para almacenamiento
-        encrypted_b64 = base64.b64encode(encrypted).decode('utf-8')
-        iv_b64 = base64.b64encode(iv).decode('utf-8')
-        
-        return encrypted_b64, iv_b64
+        return f"{salt_hex}${hash_hex}"
     
-    def _decrypt_password(self, encrypted_b64: str, iv_b64: str) -> str:
+    def _verify_hash(self, password: str, stored_hash: str) -> bool:
         """
-        Desencripta una contraseña
+        Verifica una contraseña contra un hash almacenado
         
         Args:
-            encrypted_b64: Contraseña encriptada en base64
-            iv_b64: IV en base64
-            
+            password: Contraseña ingresada
+            stored_hash: Hash almacenado ("salt$hash")
+        
         Returns:
-            Contraseña en texto plano
+            bool: True si la contraseña es correcta
         """
-        # Decodificar base64
-        encrypted = base64.b64decode(encrypted_b64)
-        iv = base64.b64decode(iv_b64)
-        
-        # Crear cipher
-        cipher = Cipher(
-            algorithms.AES(self.MASTER_KEY),
-            modes.CBC(iv),
-            backend=default_backend()
-        )
-        
-        # Desencriptar
-        decryptor = cipher.decryptor()
-        padded_data = decryptor.update(encrypted) + decryptor.finalize()
-        
-        # Remover padding
-        unpadder = padding.PKCS7(128).unpadder()
-        data = unpadder.update(padded_data) + unpadder.finalize()
-        
-        return data.decode('utf-8')
+        try:
+            # Separar salt y hash
+            if "$" not in stored_hash:
+                print("❌ Formato de hash inválido")
+                return False
+            
+            salt_hex, hash_hex = stored_hash.split("$", 1)
+            
+            # Convertir salt de hex a bytes
+            salt = binascii.unhexlify(salt_hex)
+            
+            # Calcular hash de la contraseña ingresada
+            new_hash = self._hash_password(password, salt)
+            
+            # Comparar de forma segura
+            return new_hash == stored_hash
+            
+        except Exception as e:
+            print(f"❌ Error verificando hash: {e}")
+            return False
     
     def is_password_set(self) -> bool:
         """Verifica si ya existe una contraseña configurada"""
@@ -129,11 +116,11 @@ class AuthManager:
     
     def set_password(self, password: str) -> bool:
         """
-        Configura la contraseña inicial
+        Configura o actualiza la contraseña
         
         Args:
-            password: Contraseña a establecer
-            
+            password: Contraseña en texto plano (mínimo 4 caracteres)
+        
         Returns:
             bool: True si se configuró correctamente
         """
@@ -142,30 +129,31 @@ class AuthManager:
             return False
         
         try:
-            # Encriptar contraseña
-            encrypted, iv = self._encrypt_password(password)
+            # Hashear contraseña
+            hashed_data = self._hash_password(password)
             
             # Guardar en BD
             if self.is_password_set():
-                # Actualizar
+                # Actualizar existente
                 self.db.session.execute(
                     text("""
                     UPDATE auth_config 
-                    SET password_hash = :hash, iv = :iv, 
-                        failed_attempts = 0, is_locked = 0,
+                    SET password_hash = :hash,
+                        failed_attempts = 0,
+                        is_locked = 0,
                         updated_at = CURRENT_TIMESTAMP
                     WHERE id = 1
                     """),
-                    {"hash": encrypted, "iv": iv}
+                    {"hash": hashed_data}
                 )
             else:
-                # Insertar
+                # Insertar nueva
                 self.db.session.execute(
                     text("""
-                    INSERT INTO auth_config (id, password_hash, iv, failed_attempts, is_locked)
-                    VALUES (1, :hash, :iv, 0, 0)
+                    INSERT INTO auth_config (id, password_hash, failed_attempts, is_locked)
+                    VALUES (1, :hash, 0, 0)
                     """),
-                    {"hash": encrypted, "iv": iv}
+                    {"hash": hashed_data}
                 )
             
             self.db.session.commit()
@@ -183,47 +171,42 @@ class AuthManager:
         
         Args:
             password: Contraseña a verificar
-            
+        
         Returns:
-            Tupla (success, message, failed_attempts)
+            Tuple[bool, str, int]: (éxito, mensaje, intentos_fallidos)
         """
         try:
             # Obtener configuración
             result = self.db.session.execute(
-                text("SELECT password_hash, iv, failed_attempts, is_locked FROM auth_config WHERE id = 1")
+                text("SELECT password_hash, failed_attempts, is_locked FROM auth_config WHERE id = 1")
             ).fetchone()
             
             if not result:
-                return False, "No hay contraseña configurada", 0
+                return False, "❌ No hay contraseña configurada", 0
             
-            encrypted, iv, failed_attempts, is_locked = result
+            stored_hash, failed_attempts, is_locked = result
             
             # Verificar si está bloqueado
             if is_locked:
-                return False, "⛔ Sistema bloqueado. Contacte al administrador.", failed_attempts
+                return False, "🔒 Sistema bloqueado. Contacte al administrador.", failed_attempts
             
-            # Desencriptar y comparar
-            try:
-                stored_password = self._decrypt_password(encrypted, iv)
-                
-                if password == stored_password:
-                    # ✅ Contraseña correcta - resetear intentos
-                    self.db.session.execute(
-                        text("UPDATE auth_config SET failed_attempts = 0, updated_at = CURRENT_TIMESTAMP WHERE id = 1")
-                    )
-                    self.db.session.commit()
-                    return True, "✅ Acceso concedido", 0
-                else:
-                    # ❌ Contraseña incorrecta
-                    return self._handle_failed_attempt(failed_attempts)
-                    
-            except Exception as decrypt_error:
-                print(f"❌ Error desencriptando: {decrypt_error}")
-                return False, "Error de autenticación", failed_attempts
-                
+            # Verificar contraseña
+            if self._verify_hash(password, stored_hash):
+                # ✅ Contraseña correcta - resetear intentos
+                self.db.session.execute(
+                    text("UPDATE auth_config SET failed_attempts = 0, updated_at = CURRENT_TIMESTAMP WHERE id = 1")
+                )
+                self.db.session.commit()
+                return True, "✅ Acceso concedido", 0
+            else:
+                # ❌ Contraseña incorrecta
+                return self._handle_failed_attempt(failed_attempts)
+        
         except Exception as e:
             print(f"❌ Error verificando contraseña: {e}")
-            return False, f"Error: {str(e)}", 0
+            import traceback
+            traceback.print_exc()
+            return False, f"❌ Error: {str(e)}", 0
     
     def _handle_failed_attempt(self, current_attempts: int) -> Tuple[bool, str, int]:
         """
@@ -231,9 +214,9 @@ class AuthManager:
         
         Args:
             current_attempts: Intentos fallidos actuales
-            
+        
         Returns:
-            Tupla (success=False, message, new_attempts)
+            Tuple[bool, str, int]: (False, mensaje, nuevos_intentos)
         """
         new_attempts = current_attempts + 1
         
@@ -281,10 +264,10 @@ class AuthManager:
                     f"Intentos restantes: {remaining}\n\n"
                     f"⚠️ Al 7º intento fallido se reseteará la base de datos."
                 ), new_attempts
-                
+        
         except Exception as e:
             print(f"❌ Error manejando intento fallido: {e}")
-            return False, "Error del sistema", new_attempts
+            return False, "❌ Error del sistema", new_attempts
     
     def _reset_database(self):
         """
@@ -296,7 +279,7 @@ class AuthManager:
         print("="*60)
         
         try:
-            # Eliminar todas las transacciones
+            # Eliminar transacciones
             self.db.session.execute(text("DELETE FROM transactions"))
             
             # Eliminar presupuestos
@@ -308,7 +291,7 @@ class AuthManager:
             except:
                 pass
             
-            # Eliminar categorías personalizadas (mantener predeterminadas)
+            # Eliminar categorías personalizadas
             self.db.session.execute(text("DELETE FROM categories WHERE is_default = 0"))
             
             # Resetear auth_config
@@ -340,24 +323,24 @@ class AuthManager:
         Args:
             old_password: Contraseña actual
             new_password: Nueva contraseña
-            
+        
         Returns:
-            Tupla (success, message)
+            Tuple[bool, str]: (éxito, mensaje)
         """
         # Verificar contraseña actual
         success, message, _ = self.verify_password(old_password)
         
         if not success:
-            return False, "Contraseña actual incorrecta"
+            return False, "❌ Contraseña actual incorrecta"
         
         if len(new_password) < 4:
-            return False, "Nueva contraseña muy corta (mínimo 4 caracteres)"
+            return False, "❌ Nueva contraseña muy corta (mínimo 4 caracteres)"
         
         # Establecer nueva contraseña
         if self.set_password(new_password):
             return True, "✅ Contraseña cambiada correctamente"
         else:
-            return False, "Error al cambiar contraseña"
+            return False, "❌ Error al cambiar contraseña"
     
     def reset_failed_attempts(self):
         """Resetea el contador de intentos fallidos (uso administrativo)"""

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 
+Archivo: android/app/src/main/res/xml/file_paths.xml
+Define las rutas accesibles por el FileProvider
+-->
+<paths xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- ✅ Archivos internos de la app -->
+    <files-path name="app_files" path="." />
+    
+    <!-- ✅ Caché de la app -->
+    <cache-path name="app_cache" path="." />
+    
+    <!-- ✅ Almacenamiento externo -->
+    <external-path name="external_files" path="." />
+    
+    <!-- ✅ Directorio de descargas público -->
+    <external-path name="downloads" path="Download/" />
+</paths>

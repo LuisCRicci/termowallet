@@ -1,21 +1,32 @@
-# Dependencias principales
+# Dependencias principales de TermoWallet
+
+# Framework principal
 flet==0.28.3
 
 # Base de datos
 SQLAlchemy>=2.0.0
 
-# Criptografía (NUEVO - para AES-256)
-cryptography>=41.0.0
-
-# Procesamiento de archivos Excel (solo si usas reportes en Excel)
+# Procesamiento de archivos Excel
 openpyxl>=3.1.0
 
-# Utilidades
+# Utilidades de fecha
 python-dateutil>=2.8.0
 
-# Opcional: si usas QR codes
-qrcode>=7.4.0
-pypng>=0.20220715.0
+# SSL para requests
+certifi>=2023.7.22
+
+# ❌ REMOVIDO: jnius (causa crashes en Flet Android)
+# ❌ REMOVIDO: cryptography (no necesario para esta app)
+# ❌ REMOVIDO: qrcode (no usado actualmente)
 
 # Instalación:
 # pip install -r requirements.txt
+
+# Para compilar APK:
+# flet build apk --verbose
+
+#limpieza de caché
+#flet clean
+# Limpiar cache de Python
+#find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null
+#find . -type f -name "*.pyc" -delete 2>/dev/null

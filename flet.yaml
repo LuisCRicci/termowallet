@@ -1,10 +1,47 @@
 name: termowallet
 description: Aplicación de gestión de gastos personales
-version: 1.0.0
+version: 1.0.2
 
+# ✅ CONFIGURACIÓN DE ICONOS
 flutter:
-  # Configuración del icono de la aplicación
   icons:
     image_path: "assets/icon.png"
     adaptive_icon_foreground: "assets/icon_foreground.png"
-    adaptive_icon_background: "#FFFFFF"  # Color de fondo para íconos adaptativos
+    adaptive_icon_background: "#FFFFFF"
+
+# ✅ CONFIGURACIÓN ANDROID
+android:
+  permissions:
+    - android.permission.INTERNET
+    - android.permission.READ_EXTERNAL_STORAGE
+    - android.permission.WRITE_EXTERNAL_STORAGE
+  
+  # Configuración de compilación
+  min_sdk_version: 21
+  target_sdk_version: 34
+  compile_sdk_version: 34
+  
+  # Identificador de la app
+  package: com.flet.termowallet
+  
+  # ✅ Gradle dependencies mínimas
+  gradle:
+    dependencies:
+      - androidx.core:core:1.12.0
+      - androidx.appcompat:appcompat:1.6.1
+
+# ✅ DEPENDENCIAS PYTHON (SIN jnius, SIN cryptography)
+requirements:
+  - sqlalchemy>=2.0.0
+  - openpyxl>=3.1.0
+  - python-dateutil>=2.8.0
+  - certifi>=2023.7.22
+
+# ❌ REMOVIDO: jnius (causa crashes en Android con Flet)
+# ❌ REMOVIDO: cryptography (no es necesario para esta app)
+# ❌ REMOVIDO: MANAGE_EXTERNAL_STORAGE (no compatible con política de Google Play)
+
+# ℹ️ NOTAS:
+# - Los permisos de almacenamiento se solicitan automáticamente
+# - FilePicker maneja el acceso a archivos de forma nativa
+# - No se necesita jnius para Flet (causa crashes)

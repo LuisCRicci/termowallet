@@ -148,6 +148,283 @@ class ReportGenerator:
                 "message": error_msg
             }
     
+    
+    def generate_custom_range_report(
+        self,
+        start_date: datetime,
+        end_date: datetime,
+        format: str = "xlsx",
+        callback_success = None,
+        callback_error = None
+    ) -> Dict:
+        """
+        Genera reporte de rango personalizado de fechas
+        
+        Args:
+            start_date: Fecha de inicio
+            end_date: Fecha de fin
+            format: Formato del archivo (xlsx o csv)
+            callback_success: Función de éxito
+            callback_error: Función de error
+        
+        Returns:
+            Dict con resultado
+        """
+        try:
+            print(f"\n📊 Generando reporte personalizado: {start_date.strftime('%d/%m/%Y')} - {end_date.strftime('%d/%m/%Y')}")
+            
+            # Obtener transacciones del rango
+            transactions = self.db.get_transactions_by_date_range(start_date, end_date)
+            
+            if not transactions:
+                error_msg = "❌ No hay transacciones en este rango de fechas"
+                print(error_msg)
+                if callback_error:
+                    callback_error(error_msg)
+                return {
+                    "success": False,
+                    "filepath": None,
+                    "message": error_msg
+                }
+            
+            # Calcular estadísticas del rango
+            total_income = sum(t.amount for t in transactions if t.transaction_type == "income")
+            total_expenses = sum(t.amount for t in transactions if t.transaction_type == "expense")
+            
+            # Preparar datos de transacciones
+            transactions_data = []
+            for t in transactions:
+                category = self.db.get_category_by_id(t.category_id)
+                transactions_data.append({
+                    "Fecha": t.date.strftime("%d/%m/%Y"),
+                    "Descripción": t.description,
+                    "Categoría": category.name if category else "Sin categoría",
+                    "Tipo": "Ingreso" if t.transaction_type == "income" else "Gasto",
+                    "Monto": t.amount,
+                    "Notas": t.notes or "",
+                })
+            
+            # Resumen general
+            summary_data = [
+                {"Concepto": "Fecha Inicio", "Valor": start_date.strftime("%d/%m/%Y")},
+                {"Concepto": "Fecha Fin", "Valor": end_date.strftime("%d/%m/%Y")},
+                {"Concepto": "Días", "Valor": (end_date - start_date).days + 1},
+                {"Concepto": "Total Ingresos", "Valor": total_income},
+                {"Concepto": "Total Gastos", "Valor": total_expenses},
+                {"Concepto": "Balance", "Valor": total_income - total_expenses},
+                {"Concepto": "Nº Transacciones", "Valor": len(transactions)}
+            ]
+            
+            # Gastos por categoría
+            expenses_by_cat = {}
+            for t in transactions:
+                if t.transaction_type == "expense":
+                    category = self.db.get_category_by_id(t.category_id)
+                    cat_name = category.name if category else "Sin categoría"
+                    
+                    if cat_name not in expenses_by_cat:
+                        expenses_by_cat[cat_name] = 0
+                    expenses_by_cat[cat_name] += t.amount
+            
+            expenses_data = []
+            if total_expenses > 0:
+                for cat_name, total in sorted(expenses_by_cat.items(), key=lambda x: x[1], reverse=True):
+                    percentage = (total / total_expenses * 100)
+                    expenses_data.append({
+                        "Categoría": cat_name,
+                        "Total": total,
+                        "Porcentaje (%)": round(percentage, 2)
+                    })
+            
+            # Ingresos por categoría
+            income_by_cat = {}
+            for t in transactions:
+                if t.transaction_type == "income":
+                    category = self.db.get_category_by_id(t.category_id)
+                    cat_name = category.name if category else "Sin categoría"
+                    
+                    if cat_name not in income_by_cat:
+                        income_by_cat[cat_name] = 0
+                    income_by_cat[cat_name] += t.amount
+            
+            income_data = []
+            if total_income > 0:
+                for cat_name, total in sorted(income_by_cat.items(), key=lambda x: x[1], reverse=True):
+                    percentage = (total / total_income * 100)
+                    income_data.append({
+                        "Categoría": cat_name,
+                        "Total": total,
+                        "Porcentaje (%)": round(percentage, 2)
+                    })
+            
+            # Nombre de archivo
+            filename = f"Reporte_TermoWallet_{start_date.strftime('%d%m%Y')}_al_{end_date.strftime('%d%m%Y')}.{format}"
+            
+            # Crear y compartir archivo
+            return self._create_and_share_file(
+                filename,
+                format,
+                transactions_data,
+                summary_data,
+                expenses_data,
+                income_data,
+                callback_success,
+                callback_error
+            )
+            
+        except Exception as e:
+            print(f"❌ Error generando reporte personalizado: {e}")
+            import traceback
+            traceback.print_exc()
+            error_msg = f"❌ Error: {str(e)}"
+            if callback_error:
+                callback_error(error_msg)
+            return {
+                "success": False,
+                "filepath": None,
+                "message": error_msg
+            }
+
+
+    def generate_annual_report(
+        self,
+        year: int,
+        format: str = "xlsx",
+        callback_success = None,
+        callback_error = None
+    ) -> Dict:
+        """
+        Genera reporte anual completo
+        
+        Args:
+            year: Año del reporte
+            format: Formato del archivo (xlsx o csv)
+            callback_success: Función de éxito
+            callback_error: Función de error
+        
+        Returns:
+            Dict con resultado
+        """
+        try:
+            print(f"\n📊 Generando reporte anual: {year}")
+            
+            # Obtener todas las transacciones del año
+            all_transactions = []
+            for month in range(1, 13):
+                monthly_trans = self.db.get_transactions_by_month(year, month)
+                all_transactions.extend(monthly_trans)
+            
+            if not all_transactions:
+                error_msg = f"❌ No hay transacciones en el año {year}"
+                print(error_msg)
+                if callback_error:
+                    callback_error(error_msg)
+                return {
+                    "success": False,
+                    "filepath": None,
+                    "message": error_msg
+                }
+            
+            # Calcular estadísticas anuales
+            total_income = sum(t.amount for t in all_transactions if t.transaction_type == "income")
+            total_expenses = sum(t.amount for t in all_transactions if t.transaction_type == "expense")
+            
+            # Preparar datos de transacciones
+            transactions_data = []
+            for t in all_transactions:
+                category = self.db.get_category_by_id(t.category_id)
+                transactions_data.append({
+                    "Fecha": t.date.strftime("%d/%m/%Y"),
+                    "Descripción": t.description,
+                    "Categoría": category.name if category else "Sin categoría",
+                    "Tipo": "Ingreso" if t.transaction_type == "income" else "Gasto",
+                    "Monto": t.amount,
+                    "Notas": t.notes or "",
+                })
+            
+            # Resumen anual
+            summary_data = [
+                {"Concepto": "Año", "Valor": year},
+                {"Concepto": "Total Ingresos", "Valor": total_income},
+                {"Concepto": "Total Gastos", "Valor": total_expenses},
+                {"Concepto": "Balance", "Valor": total_income - total_expenses},
+                {"Concepto": "Tasa de Ahorro (%)", "Valor": round((total_income - total_expenses) / total_income * 100, 2) if total_income > 0 else 0},
+                {"Concepto": "Nº Transacciones", "Valor": len(all_transactions)}
+            ]
+            
+            # Gastos por categoría
+            expenses_by_cat = {}
+            for t in all_transactions:
+                if t.transaction_type == "expense":
+                    category = self.db.get_category_by_id(t.category_id)
+                    cat_name = category.name if category else "Sin categoría"
+                    
+                    if cat_name not in expenses_by_cat:
+                        expenses_by_cat[cat_name] = 0
+                    expenses_by_cat[cat_name] += t.amount
+            
+            expenses_data = []
+            if total_expenses > 0:
+                for cat_name, total in sorted(expenses_by_cat.items(), key=lambda x: x[1], reverse=True):
+                    percentage = (total / total_expenses * 100)
+                    expenses_data.append({
+                        "Categoría": cat_name,
+                        "Total": total,
+                        "Porcentaje (%)": round(percentage, 2)
+                    })
+            
+            # Ingresos por categoría
+            income_by_cat = {}
+            for t in all_transactions:
+                if t.transaction_type == "income":
+                    category = self.db.get_category_by_id(t.category_id)
+                    cat_name = category.name if category else "Sin categoría"
+                    
+                    if cat_name not in income_by_cat:
+                        income_by_cat[cat_name] = 0
+                    income_by_cat[cat_name] += t.amount
+            
+            income_data = []
+            if total_income > 0:
+                for cat_name, total in sorted(income_by_cat.items(), key=lambda x: x[1], reverse=True):
+                    percentage = (total / total_income * 100)
+                    income_data.append({
+                        "Categoría": cat_name,
+                        "Total": total,
+                        "Porcentaje (%)": round(percentage, 2)
+                    })
+            
+            # Nombre de archivo
+            filename = f"Reporte_TermoWallet_Anual_{year}.{format}"
+            
+            # Crear y compartir archivo
+            return self._create_and_share_file(
+                filename,
+                format,
+                transactions_data,
+                summary_data,
+                expenses_data,
+                income_data,
+                callback_success,
+                callback_error
+            )
+            
+        except Exception as e:
+            print(f"❌ Error generando reporte anual: {e}")
+            import traceback
+            traceback.print_exc()
+            error_msg = f"❌ Error: {str(e)}"
+            if callback_error:
+                callback_error(error_msg)
+            return {
+                "success": False,
+                "filepath": None,
+                "message": error_msg
+            }
+    
+    
+    
+    
     def _create_and_share_file(
         self,
         filename: str,

@@ -704,6 +704,46 @@ class DatabaseManager:
             .order_by(Transaction.date.desc())
             .all()
         )
+        
+    def get_transactions_by_date_range(
+        self, 
+        start_date: datetime, 
+        end_date: datetime
+    ) -> List:
+        """
+        Obtiene todas las transacciones en un rango de fechas
+        
+        Args:
+            start_date: Fecha de inicio (datetime)
+            end_date: Fecha de fin (datetime)
+        
+        Returns:
+            List: Lista de objetos Transaction en el rango
+        """
+        try:
+            # ✅ CORRECCIÓN: Usar self.session en lugar de self.Session()
+            # Asegurarse de que las fechas sean datetime
+            if not isinstance(start_date, datetime):
+                start_date = datetime.combine(start_date, datetime.min.time())
+            if not isinstance(end_date, datetime):
+                end_date = datetime.combine(end_date, datetime.max.time())
+            
+            # Consultar transacciones en el rango usando la sesión existente
+            transactions = self.session.query(Transaction).filter(
+                Transaction.date >= start_date,
+                Transaction.date <= end_date
+            ).order_by(Transaction.date.desc()).all()
+            
+            print(f"📊 Encontradas {len(transactions)} transacciones entre {start_date.strftime('%d/%m/%Y')} y {end_date.strftime('%d/%m/%Y')}")
+            
+            return transactions
+            
+        except Exception as e:
+            print(f"❌ Error obteniendo transacciones por rango: {e}")
+            import traceback
+            traceback.print_exc()
+            return []
+    
 
     def get_transactions_by_type(
         self,

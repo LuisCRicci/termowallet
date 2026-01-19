@@ -684,11 +684,253 @@ class ExpenseTrackerApp:
             traceback.print_exc()
             self.show_snackbar(f"Error: {str(e)}", error=True)
 
+    # ============================================================
+    # ✅ REEMPLAZAR EL MÉTODO EXISTENTE refresh_current_view()
+    # ============================================================
+
     def refresh_current_view(self):
-        """Refresca la vista actual"""
-        if self.current_view in self.views:
-            del self.views[self.current_view]
-        self.load_view(self.current_view)
+        """
+        ✅ MEJORADO: Refresca la vista actual
+        Ahora con soporte para recarga después de importaciones masivas
+        """
+        try:
+            print(f"\n{'='*60}")
+            print(f"🔄 REFRESCANDO VISTA ACTUAL: {self.current_view}")
+            print(f"{'='*60}")
+            
+            # Eliminar vista del cache para forzar reconstrucción
+            if self.current_view in self.views:
+                print(f"  🗑️ Eliminando vista del cache...")
+                del self.views[self.current_view]
+            
+            # Recargar vista
+            print(f"  🔨 Reconstruyendo vista...")
+            self.load_view(self.current_view)
+            
+            print(f"  ✅ Vista refrescada correctamente")
+            print(f"{'='*60}\n")
+            
+        except Exception as e:
+            print(f"❌ Error al refrescar vista: {e}")
+            import traceback
+            traceback.print_exc()
+
+
+    # ============================================================
+    # ✅ NUEVO MÉTODO: reload_current_view
+    # ============================================================
+
+    def reload_current_view(self):
+        """
+        ✅ NUEVO: Recarga completamente la vista actual con refresh de sesión BD
+        Específicamente diseñado para importaciones masivas de datos
+        
+        Diferencia con refresh_current_view():
+        - Este método también refresca la sesión de base de datos
+        - Útil cuando hay cambios masivos en la BD
+        """
+        try:
+            print(f"\n{'='*60}")
+            print(f"🔄 RECARGA COMPLETA DE VISTA: {self.current_view}")
+            print(f"{'='*60}")
+            
+            # ✅ PASO 1: Refrescar sesión de BD
+            try:
+                print(f"  💾 Refrescando sesión de base de datos...")
+                self.db.session.close()
+                
+                from sqlalchemy.orm import sessionmaker
+                Session = sessionmaker(bind=self.db.engine)
+                self.db.session = Session()
+                
+                print(f"  ✅ Sesión de BD refrescada")
+            except Exception as db_error:
+                print(f"  ⚠️ Error al refrescar sesión BD: {db_error}")
+                # Continuar de todos modos
+            
+            # ✅ PASO 2: Eliminar vista del cache
+            if self.current_view in self.views:
+                print(f"  🗑️ Eliminando vista del cache...")
+                del self.views[self.current_view]
+            
+            # ✅ PASO 3: Reconstruir vista con datos frescos
+            print(f"  🔨 Reconstruyendo vista...")
+            view = self.get_or_create_view(self.current_view)
+            
+            if view:
+                # Sincronizar mes/año actual si la vista lo soporta
+                if hasattr(view, 'current_month'):
+                    view.current_month = self.current_month
+                    view.current_year = self.current_year
+                
+                # Reconstruir contenido
+                content = view.build()
+                self.main_container.content = content
+                self.main_container.update()
+            
+            # ✅ PASO 4: Actualizar página completa
+            self.page.update()
+            
+            print(f"  ✅ Vista recargada correctamente")
+            print(f"{'='*60}\n")
+            
+            return True
+            
+        except Exception as e:
+            print(f"\n❌ ERROR AL RECARGAR VISTA: {e}")
+            import traceback
+            traceback.print_exc()
+            
+            # Intentar recuperación básica
+            try:
+                self.refresh_current_view()
+            except:
+                pass
+            
+            return False
+
+
+    # ============================================================
+    # ✅ NUEVO MÉTODO: force_refresh_after_import
+    # ============================================================
+
+    def force_refresh_after_import(self):
+        """
+        ✅ NUEVO: Fuerza actualización completa después de importación masiva
+        
+        Este es el método MÁS AGRESIVO para refrescar:
+        1. Cierra completamente la sesión de BD
+        2. Crea una nueva sesión desde cero (scoped_session)
+        3. Limpia cache de todas las vistas
+        4. Reconstruye la vista actual
+        
+        Úsalo cuando:
+        - Se importan 100+ transacciones
+        - Hay errores de "prepared state"
+        - Los datos no se actualizan con refresh normal
+        """
+        try:
+            print(f"\n{'='*60}")
+            print(f"🔄 REFRESH COMPLETO POST-IMPORTACIÓN")
+            print(f"{'='*60}")
+            
+            # ✅ PASO 1: Cerrar sesión actual completamente
+            if hasattr(self.db, 'session'):
+                try:
+                    print(f"  💾 Cerrando sesión actual...")
+                    self.db.session.close()
+                    print(f"  ✅ Sesión cerrada")
+                except Exception as close_error:
+                    print(f"  ⚠️ Error al cerrar sesión: {close_error}")
+            
+            # ✅ PASO 2: Recrear sesión con scoped_session (thread-safe)
+            try:
+                print(f"  💾 Creando nueva sesión...")
+                from sqlalchemy.orm import sessionmaker, scoped_session
+                
+                # Crear nueva sesión con scope
+                Session = scoped_session(sessionmaker(bind=self.db.engine))
+                self.db.session = Session()
+                
+                print(f"  ✅ Nueva sesión creada (scoped)")
+            except Exception as session_error:
+                print(f"  ⚠️ Error creando sesión: {session_error}")
+                # Intentar método simple como fallback
+                try:
+                    from sqlalchemy.orm import sessionmaker
+                    Session = sessionmaker(bind=self.db.engine)
+                    self.db.session = Session()
+                    print(f"  ✅ Nueva sesión creada (simple)")
+                except Exception as fallback_error:
+                    print(f"  ❌ No se pudo crear sesión: {fallback_error}")
+                    return False
+            
+            # ✅ PASO 3: Limpiar TODAS las vistas del cache
+            print(f"  🗑️ Limpiando cache de vistas...")
+            cleared_count = len(self.views)
+            self.views.clear()
+            print(f"  ✅ {cleared_count} vistas eliminadas del cache")
+            
+            # ✅ PASO 4: Recargar vista actual
+            print(f"  🔨 Recargando vista actual: {self.current_view}")
+            self.load_view(self.current_view)
+            
+            # ✅ PASO 5: Forzar actualización completa de la página
+            self.page.update()
+            
+            print(f"  ✅ Refresh completo exitoso")
+            print(f"{'='*60}\n")
+            
+            return True
+            
+        except Exception as e:
+            print(f"\n❌ ERROR EN REFRESH COMPLETO: {e}")
+            import traceback
+            traceback.print_exc()
+            print(f"{'='*60}\n")
+            
+            # Último intento de recuperación
+            try:
+                print(f"  🔧 Intentando recuperación básica...")
+                self.refresh_current_view()
+            except:
+                pass
+            
+            return False
+
+
+    # ============================================================
+    # ✅ MÉTODO AUXILIAR: Verificar estado de sesión
+    # ============================================================
+
+    def check_session_health(self):
+        """
+        ✅ NUEVO: Verifica el estado de la sesión de BD
+        Útil para diagnóstico de problemas
+        
+        Returns:
+            dict: Estado de la sesión con detalles
+        """
+        try:
+            status = {
+                "healthy": True,
+                "session_exists": hasattr(self.db, 'session'),
+                "session_active": False,
+                "session_dirty": False,
+                "session_new": False,
+                "session_deleted": False,
+                "errors": []
+            }
+            
+            if not status["session_exists"]:
+                status["healthy"] = False
+                status["errors"].append("Sesión no existe")
+                return status
+            
+            try:
+                # Verificar si la sesión está activa
+                status["session_active"] = self.db.session.is_active
+                
+                # Verificar objetos pendientes
+                status["session_dirty"] = len(self.db.session.dirty) > 0
+                status["session_new"] = len(self.db.session.new) > 0
+                status["session_deleted"] = len(self.db.session.deleted) > 0
+                
+                # Intentar una consulta simple
+                self.db.session.execute("SELECT 1")
+                
+            except Exception as check_error:
+                status["healthy"] = False
+                status["errors"].append(f"Error verificando sesión: {check_error}")
+            
+            return status
+            
+        except Exception as e:
+            return {
+                "healthy": False,
+                "session_exists": False,
+                "errors": [f"Error crítico: {e}"]
+            }
 
     def show_snackbar(self, message: str, error: bool = False):
         """Muestra un mensaje temporal"""
@@ -736,6 +978,10 @@ def main(page: ft.Page):
     # Inicializar app
     try:
         app = ExpenseTrackerApp(page)
+        
+        # ✅ NUEVO: Conectar la app a la página para acceso desde vistas
+        page.app = app
+        
         page.clean()
         app.start()
         print("\n✅ APLICACIÓN LISTA\n")

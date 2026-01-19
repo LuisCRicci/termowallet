@@ -530,106 +530,254 @@ class AddTransactionView(BaseView):
         self.page.update()
 
     """
-    Actualización del método process_import_file en add_transaction_view.py
-    Para usar las palabras clave almacenadas en la base de datos
+    ✅ REEMPLAZAR COMPLETAMENTE el método process_import_file 
+    EN: src/ui/add_transaction_view.py
+
+    Este método ahora:
+    1. Procesa en lotes de 100
+    2. Hace commit por lote
+    3. Refresca la sesión al finalizar
+    4. Recarga automáticamente la vista
     """
 
     def process_import_file(self, file_path: str):
-        """✅ ACTUALIZADO: Usa palabras clave de la BD para categorizar"""
+        """✅ MEJORADO: Gestiona correctamente las transacciones masivas con recarga automática"""
         self.close_dialog()
         self.show_snackbar("Procesando archivo...")
 
         try:
-            # 1. Cargar archivo
+            # ============================================================
+            # PASO 1: CARGAR Y VALIDAR ARCHIVO
+            # ============================================================
+            
             success, message = self.processor.load_file(file_path)
             if not success:
                 self.show_snackbar(message, error=True)
                 return
 
-            # 2. Validar columnas
             success, message = self.processor.validate_columns()
             if not success:
                 self.show_snackbar(message, error=True)
                 return
 
-            # 3. Limpiar datos
             success, message = self.processor.clean_data()
             if not success:
                 self.show_snackbar(message, error=True)
                 return
 
-            # 4. Obtener categorías con sus palabras clave de la BD
+            # ============================================================
+            # PASO 2: CONFIGURAR CATEGORIZADOR
+            # ============================================================
+            
             categories_expense = self.db.get_all_categories("expense")
             categories_income = self.db.get_all_categories("income")
 
-            # ✅ NUEVO: Actualizar el categorizador con las palabras clave de la BD
             from src.business.categorizer import TransactionCategorizer
             categorizer = TransactionCategorizer()
             
-            # Cargar palabras clave personalizadas de gastos
+            # Cargar palabras clave de gastos
             for cat in categories_expense:
                 keywords_from_db = cat.get_keywords_list()
                 if keywords_from_db:
-                    # Reemplazar las palabras clave predeterminadas con las de la BD
                     categorizer.set_keywords(cat.name, keywords_from_db, "expense")
             
-            # Cargar palabras clave personalizadas de ingresos
+            # Cargar palabras clave de ingresos
             for cat in categories_income:
                 keywords_from_db = cat.get_keywords_list()
                 if keywords_from_db:
                     categorizer.set_keywords(cat.name, keywords_from_db, "income")
             
-            # Actualizar el categorizador del processor
             self.processor.categorizer = categorizer
 
             # Crear mapas de categorías
             categories_map_expense = {}
             for cat in categories_expense:
                 try:
-                    safe_id = int(cat.id) if cat.id is not None else 0
-                    safe_name = str(cat.name) if cat.name is not None else "Sin categoría"
-                    categories_map_expense[safe_id] = safe_name
-                except Exception as e:
-                    print(f"⚠️ Error al procesar categoría de gasto: {e}")
+                    categories_map_expense[int(cat.id)] = str(cat.name)
+                except:
                     continue
 
             categories_map_income = {}
             for cat in categories_income:
                 try:
-                    safe_id = int(cat.id) if cat.id is not None else 0
-                    safe_name = str(cat.name) if cat.name is not None else "Sin categoría"
-                    categories_map_income[safe_id] = safe_name
-                except Exception as e:
-                    print(f"⚠️ Error al procesar categoría de ingreso: {e}")
+                    categories_map_income[int(cat.id)] = str(cat.name)
+                except:
                     continue
 
-            # 5. Categorizar transacciones
+            # Categorizar
             self.processor.categorize_transactions(
                 categories_map_expense, 
                 categories_map_income
             )
 
-            # 6. Obtener datos procesados
+            # ============================================================
+            # PASO 3: INSERCIÓN MASIVA EN LOTES
+            # ============================================================
+            
             processed_data = self.processor.get_processed_data()
-
-            # 7. Insertar en base de datos
-            count = self.db.add_transactions_bulk(processed_data)
-
-            # 8. Mostrar resumen
+            
+            print(f"\n{'='*60}")
+            print(f"📦 IMPORTACIÓN MASIVA")
+            print(f"{'='*60}")
+            print(f"   Total a insertar: {len(processed_data)}")
+            print(f"{'='*60}\n")
+            
+            BATCH_SIZE = 100
+            total_inserted = 0
+            total_failed = 0
+            
+            for i in range(0, len(processed_data), BATCH_SIZE):
+                batch = processed_data[i:i + BATCH_SIZE]
+                batch_num = (i // BATCH_SIZE) + 1
+                
+                try:
+                    print(f"  📦 Lote {batch_num}: Insertando {len(batch)} transacciones...")
+                    
+                    # Insertar el lote
+                    count = self.db.add_transactions_bulk(batch)
+                    
+                    # ✅ COMMIT EXPLÍCITO después de cada lote
+                    self.db.session.commit()
+                    
+                    total_inserted += count
+                    print(f"  ✅ Lote {batch_num}: {count} transacciones insertadas y confirmadas")
+                    
+                except Exception as batch_error:
+                    print(f"  ❌ Error en lote {batch_num}: {batch_error}")
+                    
+                    # Rollback del lote fallido
+                    try:
+                        self.db.session.rollback()
+                    except:
+                        pass
+                    
+                    total_failed += len(batch)
+                    continue
+            
+            # ============================================================
+            # PASO 4: REFRESCAR SESIÓN DE BD
+            # ============================================================
+            
+            print(f"\n{'='*60}")
+            print(f"🔄 REFRESCANDO SESIÓN DE BASE DE DATOS")
+            print(f"{'='*60}")
+            
+            try:
+                # Cerrar sesión actual
+                self.db.session.close()
+                print(f"  ✅ Sesión actual cerrada")
+                
+                # Crear nueva sesión
+                from sqlalchemy.orm import sessionmaker
+                Session = sessionmaker(bind=self.db.engine)
+                self.db.session = Session()
+                
+                print(f"  ✅ Nueva sesión creada")
+                
+            except Exception as refresh_error:
+                print(f"  ⚠️ Error al refrescar sesión: {refresh_error}")
+                # Continuar de todos modos
+            
+            # ============================================================
+            # PASO 5: MOSTRAR RESUMEN
+            # ============================================================
+            
             summary = self.processor.get_summary()
             
-            message = f"✅ {count} transacciones importadas exitosamente\n"
-            message += f"📊 Gastos: {summary.get('count_expenses', 0)} | "
-            message += f"Ingresos: {summary.get('count_income', 0)}"
-
-            self.show_snackbar(message)
+            print(f"\n{'='*60}")
+            print(f"✅ IMPORTACIÓN COMPLETADA")
+            print(f"{'='*60}")
+            print(f"   Insertadas: {total_inserted}")
+            print(f"   Fallidas: {total_failed}")
+            print(f"   Gastos: {summary.get('count_expenses', 0)}")
+            print(f"   Ingresos: {summary.get('count_income', 0)}")
+            print(f"{'='*60}\n")
+            
+            # Mensaje al usuario
+            if total_inserted > 0:
+                message = f"✅ {total_inserted} transacciones importadas exitosamente\n"
+                message += f"📊 Gastos: {summary.get('count_expenses', 0)} | "
+                message += f"Ingresos: {summary.get('count_income', 0)}"
+                
+                if total_failed > 0:
+                    message += f"\n⚠️ {total_failed} transacciones fallaron"
+                
+                self.show_snackbar(message)
+            else:
+                self.show_snackbar("❌ No se pudo importar ninguna transacción", error=True)
+                return
+            
+            # ============================================================
+            # PASO 6: ✅ RECARGAR VISTA AUTOMÁTICAMENTE
+            # ============================================================
+            
+            print(f"\n{'='*60}")
+            print(f"🔄 RECARGANDO INTERFAZ")
+            print(f"{'='*60}")
+            
+            try:
+                # Método 1: Usar force_refresh_after_import (más agresivo, recomendado)
+                if hasattr(self.page, 'app') and hasattr(self.page.app, 'force_refresh_after_import'):
+                    print(f"  🔨 Usando force_refresh_after_import...")
+                    success = self.page.app.force_refresh_after_import()
+                    
+                    if success:
+                        print(f"  ✅ Vista recargada con force_refresh")
+                    else:
+                        print(f"  ⚠️ force_refresh falló, intentando reload...")
+                        # Fallback a reload
+                        if hasattr(self.page.app, 'reload_current_view'):
+                            self.page.app.reload_current_view()
+                            print(f"  ✅ Vista recargada con reload")
+                
+                # Método 2: Usar reload_current_view (moderado)
+                elif hasattr(self.page, 'app') and hasattr(self.page.app, 'reload_current_view'):
+                    print(f"  🔨 Usando reload_current_view...")
+                    self.page.app.reload_current_view()
+                    print(f"  ✅ Vista recargada con reload")
+                
+                # Método 3: Usar refresh simple (básico)
+                elif hasattr(self.page, 'app') and hasattr(self.page.app, 'refresh_current_view'):
+                    print(f"  🔨 Usando refresh_current_view...")
+                    self.page.app.refresh_current_view()
+                    print(f"  ✅ Vista refrescada")
+                
+                # Fallback final: actualizar página
+                else:
+                    print(f"  ⚠️ Métodos de recarga no disponibles, usando page.update()...")
+                    self.page.update()
+                    print(f"  ✅ Página actualizada (básico)")
+                
+                print(f"{'='*60}\n")
+                
+            except Exception as reload_error:
+                print(f"  ⚠️ Error al recargar vista: {reload_error}")
+                import traceback
+                traceback.print_exc()
+                
+                # Último intento
+                try:
+                    self.page.update()
+                except:
+                    pass
 
         except Exception as ex:
+            print(f"\n{'='*60}")
+            print(f"❌ ERROR CRÍTICO EN IMPORTACIÓN")
+            print(f"{'='*60}")
             import traceback
             traceback.print_exc()
-            self.show_snackbar(f"Error al importar: {str(ex)}", error=True)
+            print(f"{'='*60}\n")
             
-
+            # Rollback de seguridad
+            try:
+                self.db.session.rollback()
+            except:
+                pass
+            
+            self.show_snackbar(f"Error al importar: {str(ex)}", error=True)
+        
+        
     def build(self) -> ft.Control:
         """Construye la vista"""
         save_button = ft.ElevatedButton(

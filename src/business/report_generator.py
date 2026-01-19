@@ -1,15 +1,15 @@
 """
-Generador de Reportes - ✅ COMPATIBLE CON ANDROID usando Sistema Nativo
+Generador de Reportes - ✅ CORREGIDO PARA ANDROID
 Archivo: src/business/report_generator.py
 
-✅ Sin jnius - Usa sistema de compartir de Android
-✅ El usuario elige dónde guardar (Drive, Downloads, etc.)
+✅ FIX CRÍTICO: Eliminar page.save_file() y copiar directamente
 """
 
 import csv
 import sys
 import os
 import tempfile
+import shutil
 from datetime import datetime
 from typing import Dict, List
 
@@ -30,7 +30,7 @@ class ReportGenerator:
         from src.utils.config import Config
         self.is_android = Config.is_android()
         
-        # FilePicker para compartir archivos
+        # FilePicker para guardar archivos
         self.file_picker = None
         if page:
             try:
@@ -49,12 +49,7 @@ class ReportGenerator:
         callback_success = None,
         callback_error = None
     ) -> Dict:
-        """
-        Genera reporte mensual y permite al usuario guardarlo
-        
-        Returns:
-            Dict con resultado
-        """
+        """Genera reporte mensual"""
         try:
             print(f"\n📊 Generando reporte mensual: {month}/{year}")
             
@@ -123,8 +118,8 @@ class ReportGenerator:
             ]
             filename = f"Reporte_TermoWallet_{month_names[month-1]}_{year}.{format}"
 
-            # ✅ NUEVA ESTRATEGIA: Crear en temp y compartir
-            return self._create_and_share_file(
+            # ✅ GUARDAR DATOS PARA USAR EN EL CALLBACK
+            return self._prepare_file_save(
                 filename,
                 format,
                 transactions_data,
@@ -157,23 +152,10 @@ class ReportGenerator:
         callback_success = None,
         callback_error = None
     ) -> Dict:
-        """
-        Genera reporte de rango personalizado de fechas
-        
-        Args:
-            start_date: Fecha de inicio
-            end_date: Fecha de fin
-            format: Formato del archivo (xlsx o csv)
-            callback_success: Función de éxito
-            callback_error: Función de error
-        
-        Returns:
-            Dict con resultado
-        """
+        """Genera reporte de rango personalizado"""
         try:
             print(f"\n📊 Generando reporte personalizado: {start_date.strftime('%d/%m/%Y')} - {end_date.strftime('%d/%m/%Y')}")
             
-            # Obtener transacciones del rango
             transactions = self.db.get_transactions_by_date_range(start_date, end_date)
             
             if not transactions:
@@ -187,11 +169,9 @@ class ReportGenerator:
                     "message": error_msg
                 }
             
-            # Calcular estadísticas del rango
             total_income = sum(t.amount for t in transactions if t.transaction_type == "income")
             total_expenses = sum(t.amount for t in transactions if t.transaction_type == "expense")
             
-            # Preparar datos de transacciones
             transactions_data = []
             for t in transactions:
                 category = self.db.get_category_by_id(t.category_id)
@@ -204,7 +184,6 @@ class ReportGenerator:
                     "Notas": t.notes or "",
                 })
             
-            # Resumen general
             summary_data = [
                 {"Concepto": "Fecha Inicio", "Valor": start_date.strftime("%d/%m/%Y")},
                 {"Concepto": "Fecha Fin", "Valor": end_date.strftime("%d/%m/%Y")},
@@ -215,7 +194,6 @@ class ReportGenerator:
                 {"Concepto": "Nº Transacciones", "Valor": len(transactions)}
             ]
             
-            # Gastos por categoría
             expenses_by_cat = {}
             for t in transactions:
                 if t.transaction_type == "expense":
@@ -236,7 +214,6 @@ class ReportGenerator:
                         "Porcentaje (%)": round(percentage, 2)
                     })
             
-            # Ingresos por categoría
             income_by_cat = {}
             for t in transactions:
                 if t.transaction_type == "income":
@@ -257,11 +234,9 @@ class ReportGenerator:
                         "Porcentaje (%)": round(percentage, 2)
                     })
             
-            # Nombre de archivo
             filename = f"Reporte_TermoWallet_{start_date.strftime('%d%m%Y')}_al_{end_date.strftime('%d%m%Y')}.{format}"
             
-            # Crear y compartir archivo
-            return self._create_and_share_file(
+            return self._prepare_file_save(
                 filename,
                 format,
                 transactions_data,
@@ -293,22 +268,10 @@ class ReportGenerator:
         callback_success = None,
         callback_error = None
     ) -> Dict:
-        """
-        Genera reporte anual completo
-        
-        Args:
-            year: Año del reporte
-            format: Formato del archivo (xlsx o csv)
-            callback_success: Función de éxito
-            callback_error: Función de error
-        
-        Returns:
-            Dict con resultado
-        """
+        """Genera reporte anual"""
         try:
             print(f"\n📊 Generando reporte anual: {year}")
             
-            # Obtener todas las transacciones del año
             all_transactions = []
             for month in range(1, 13):
                 monthly_trans = self.db.get_transactions_by_month(year, month)
@@ -325,11 +288,9 @@ class ReportGenerator:
                     "message": error_msg
                 }
             
-            # Calcular estadísticas anuales
             total_income = sum(t.amount for t in all_transactions if t.transaction_type == "income")
             total_expenses = sum(t.amount for t in all_transactions if t.transaction_type == "expense")
             
-            # Preparar datos de transacciones
             transactions_data = []
             for t in all_transactions:
                 category = self.db.get_category_by_id(t.category_id)
@@ -342,7 +303,6 @@ class ReportGenerator:
                     "Notas": t.notes or "",
                 })
             
-            # Resumen anual
             summary_data = [
                 {"Concepto": "Año", "Valor": year},
                 {"Concepto": "Total Ingresos", "Valor": total_income},
@@ -352,7 +312,6 @@ class ReportGenerator:
                 {"Concepto": "Nº Transacciones", "Valor": len(all_transactions)}
             ]
             
-            # Gastos por categoría
             expenses_by_cat = {}
             for t in all_transactions:
                 if t.transaction_type == "expense":
@@ -373,7 +332,6 @@ class ReportGenerator:
                         "Porcentaje (%)": round(percentage, 2)
                     })
             
-            # Ingresos por categoría
             income_by_cat = {}
             for t in all_transactions:
                 if t.transaction_type == "income":
@@ -394,11 +352,9 @@ class ReportGenerator:
                         "Porcentaje (%)": round(percentage, 2)
                     })
             
-            # Nombre de archivo
             filename = f"Reporte_TermoWallet_Anual_{year}.{format}"
             
-            # Crear y compartir archivo
-            return self._create_and_share_file(
+            return self._prepare_file_save(
                 filename,
                 format,
                 transactions_data,
@@ -423,9 +379,8 @@ class ReportGenerator:
             }
     
     
-    
-    
-    def _create_and_share_file(
+    # ✅ NUEVO MÉTODO: Preparar y abrir diálogo de guardado
+    def _prepare_file_save(
         self,
         filename: str,
         format: str,
@@ -436,68 +391,25 @@ class ReportGenerator:
         callback_success,
         callback_error
     ) -> Dict:
-        """Crea archivo temporal y abre diálogo para guardar/compartir"""
+        """Prepara los datos y abre el diálogo para guardar"""
         
         print("\n" + "="*60)
-        print("💾 CREANDO REPORTE TEMPORAL")
+        print("💾 PREPARANDO GUARDADO DE REPORTE")
         print("="*60)
+        print(f"   📄 Archivo: {filename}")
+        print(f"   📊 Formato: {format}")
+        print(f"   📝 Transacciones: {len(transactions_data)}")
+        print("="*60 + "\n")
         
         try:
-            # Crear archivo en directorio temporal
-            temp_dir = tempfile.gettempdir()
-            temp_path = os.path.join(temp_dir, filename)
-            
-            print(f"   📁 Ruta temporal: {temp_path}")
-            
-            # Generar archivo
-            if format == "xlsx" and openpyxl:
-                print(f"   📊 Generando Excel...")
-                success = self._save_excel(
-                    temp_path,
-                    transactions_data,
-                    summary_data,
-                    expenses_data,
-                    income_data
-                )
-            else:
-                print(f"   📄 Generando CSV...")
-                success = self._save_csv(
-                    temp_path,
-                    transactions_data
-                )
-            
-            if not success:
-                error_msg = "❌ Error al crear archivo"
-                print(error_msg)
-                if callback_error:
-                    callback_error(error_msg)
-                return {
-                    "success": False,
-                    "filepath": None,
-                    "message": error_msg
-                }
-            
-            # Verificar que se creó
-            if not os.path.exists(temp_path):
-                error_msg = "❌ Archivo temporal no se creó"
-                print(error_msg)
-                if callback_error:
-                    callback_error(error_msg)
-                return {
-                    "success": False,
-                    "filepath": None,
-                    "message": error_msg
-                }
-            
-            file_size = os.path.getsize(temp_path)
-            print(f"   ✅ Archivo creado: {file_size} bytes")
-            print("="*60 + "\n")
-            
-            # Guardar callbacks y datos para el diálogo
+            # Guardar datos pendientes
             self._pending_data = {
-                "temp_path": temp_path,
                 "filename": filename,
                 "format": format,
+                "transactions_data": transactions_data,
+                "summary_data": summary_data,
+                "expenses_data": expenses_data,
+                "income_data": income_data,
                 "callback_success": callback_success,
                 "callback_error": callback_error
             }
@@ -522,42 +434,21 @@ class ReportGenerator:
                         allowed_extensions=[format],
                     )
                     
-                    # Mostrar mensaje informativo
-                    if callback_success:
-                        callback_success(
-                            temp_path,
-                            f"📂 Elige dónde guardar tu reporte\n\n"
-                            f"💡 Puedes guardarlo en:\n"
-                            f"• Descargas\n"
-                            f"• Google Drive\n"
-                            f"• Cualquier carpeta de tu dispositivo"
-                        )
-                    
                     return {
                         "success": True,
-                        "filepath": temp_path,
+                        "filepath": None,
                         "message": "Selecciona ubicación para guardar"
                     }
                     
                 except Exception as e:
                     print(f"❌ Error abriendo diálogo: {e}")
-                    
-                    # Fallback: Mostrar info del archivo temporal
-                    if callback_success:
-                        callback_success(
-                            temp_path,
-                            f"✅ Reporte generado\n\n"
-                            f"📁 Ubicación temporal:\n{temp_path}\n\n"
-                            f"💡 En Android:\n"
-                            f"• Conecta tu celular por USB\n"
-                            f"• Navega a la carpeta temporal\n"
-                            f"• Copia el archivo donde desees"
-                        )
-                    
+                    error_msg = f"❌ Error al abrir diálogo: {str(e)}"
+                    if callback_error:
+                        callback_error(error_msg)
                     return {
-                        "success": True,
-                        "filepath": temp_path,
-                        "message": "Archivo creado en ubicación temporal"
+                        "success": False,
+                        "filepath": None,
+                        "message": error_msg
                     }
             else:
                 error_msg = "❌ FilePicker no disponible"
@@ -570,7 +461,7 @@ class ReportGenerator:
                 }
             
         except Exception as e:
-            print(f"❌ Error en creación: {e}")
+            print(f"❌ Error en preparación: {e}")
             import traceback
             traceback.print_exc()
             error_msg = f"❌ Error: {str(e)}"
@@ -582,8 +473,13 @@ class ReportGenerator:
                 "message": error_msg
             }
     
+    # ✅ FIX CRÍTICO: Callback cuando usuario selecciona ubicación
     def _on_file_save_result(self, e: ft.FilePickerResultEvent):
-        """Callback cuando usuario selecciona ubicación"""
+        """Callback cuando usuario selecciona ubicación - FIX CRÍTICO APLICADO"""
+        
+        print("\n" + "🔥"*30)
+        print("CALLBACK _on_file_save_result ACTIVADO")
+        print("🔥"*30)
         
         if not hasattr(self, '_pending_data'):
             print("⚠️ No hay datos pendientes")
@@ -591,59 +487,122 @@ class ReportGenerator:
         
         data = self._pending_data
         
+        print(f"📦 Datos pendientes encontrados:")
+        print(f"   Archivo: {data.get('filename', 'N/A')}")
+        print(f"   Formato: {data.get('format', 'N/A')}")
+        print(f"   Transacciones: {len(data.get('transactions_data', []))}")
+        
         if e.path is None:
-            # Usuario canceló
-            print("❌ Usuario canceló")
+            print("❌ Usuario canceló - e.path es None")
             
-            # El archivo temporal sigue disponible
             if data.get('callback_success'):
                 data['callback_success'](
-                    data['temp_path'],
-                    f"ℹ️ Guardado cancelado\n\n"
-                    f"El archivo temporal está en:\n{data['temp_path']}\n\n"
-                    f"Puedes copiarlo manualmente si lo necesitas"
+                    "",
+                    "ℹ️ Guardado cancelado"
                 )
             return
         
         # Usuario eligió ubicación
         save_path = e.path
-        print(f"💾 Usuario eligió guardar en: {save_path}")
+        print(f"\n{'='*60}")
+        print(f"💾 INICIANDO GUARDADO")
+        print(f"{'='*60}")
+        print(f"   📍 Ubicación elegida: {save_path}")
+        print(f"   📂 Directorio: {os.path.dirname(save_path)}")
+        print(f"   📄 Nombre archivo: {os.path.basename(save_path)}")
+        print(f"   📊 Formato: {data['format']}")
+        print(f"   🤖 Android: {self.is_android}")
+        print(f"   📝 Transacciones a guardar: {len(data['transactions_data'])}")
+        print(f"{'='*60}\n")
         
         try:
-            # Copiar archivo temporal a ubicación elegida
-            import shutil
-            shutil.copy2(data['temp_path'], save_path)
+            # ✅ Verificar directorio
+            directory = os.path.dirname(save_path)
+            if directory:
+                print(f"📁 Verificando directorio: {directory}")
+                if os.path.exists(directory):
+                    print(f"   ✅ Directorio existe")
+                    print(f"   ✅ Escritura permitida: {os.access(directory, os.W_OK)}")
+                else:
+                    print(f"   ⚠️ Directorio NO existe")
             
-            print(f"✅ Archivo guardado: {save_path}")
+            # ✅ ESCRIBIR DIRECTAMENTE en la ubicación final
+            if data['format'] == "xlsx" and openpyxl:
+                print(f"\n📊 === INICIANDO GUARDADO EXCEL ===")
+                success = self._save_excel(
+                    save_path,
+                    data['transactions_data'],
+                    data['summary_data'],
+                    data['expenses_data'],
+                    data['income_data']
+                )
+                print(f"📊 === FIN GUARDADO EXCEL (success={success}) ===\n")
+            else:
+                print(f"\n📄 === INICIANDO GUARDADO CSV ===")
+                success = self._save_csv(
+                    save_path,
+                    data['transactions_data']
+                )
+                print(f"📄 === FIN GUARDADO CSV (success={success}) ===\n")
+            
+            if not success:
+                error_msg = "❌ La función de guardado retornó False"
+                print(error_msg)
+                if data.get('callback_error'):
+                    data['callback_error'](error_msg)
+                return
+            
+            # Verificar que se creó
+            print(f"🔍 Verificando archivo guardado...")
+            if not os.path.exists(save_path):
+                error_msg = "❌ ERROR CRÍTICO: Archivo NO existe después del guardado"
+                print(error_msg)
+                if data.get('callback_error'):
+                    data['callback_error'](error_msg)
+                return
+            
+            file_size = os.path.getsize(save_path)
+            print(f"✅ Archivo verificado:")
+            print(f"   📏 Tamaño: {file_size} bytes")
+            print(f"   📍 Ubicación: {save_path}")
+            
+            if file_size == 0:
+                error_msg = "❌ ERROR: Archivo creado pero está VACÍO (0 bytes)"
+                print(error_msg)
+                if data.get('callback_error'):
+                    data['callback_error'](error_msg)
+                return
+            
+            print(f"{'='*60}")
+            print(f"🎉 ¡GUARDADO EXITOSO!")
+            print(f"{'='*60}\n")
             
             if data.get('callback_success'):
                 data['callback_success'](
                     save_path,
                     f"✅ ¡Reporte guardado exitosamente!\n\n"
-                    f"📁 Ubicación:\n{save_path}\n\n"
-                    f"Puedes abrirlo desde tu explorador de archivos"
+                    f"📍 Ubicación:\n{save_path}\n\n"
+                    f"📊 Tamaño: {file_size:,} bytes"
                 )
-            
-            # Limpiar archivo temporal
-            try:
-                os.remove(data['temp_path'])
-                print("🗑️ Archivo temporal eliminado")
-            except:
-                pass
                 
         except Exception as ex:
-            print(f"❌ Error guardando: {ex}")
+            print(f"\n{'='*60}")
+            print(f"❌ EXCEPCIÓN EN CALLBACK")
+            print(f"{'='*60}")
+            print(f"Tipo: {type(ex).__name__}")
+            print(f"Mensaje: {ex}")
             import traceback
             traceback.print_exc()
+            print(f"{'='*60}\n")
             
             if data.get('callback_error'):
                 data['callback_error'](
-                    f"❌ Error al guardar archivo: {str(ex)}\n\n"
-                    f"El archivo temporal sigue en:\n{data['temp_path']}"
+                    f"❌ Error crítico al guardar:\n{type(ex).__name__}: {str(ex)}"
                 )
         
         # Limpiar datos pendientes
         delattr(self, '_pending_data')
+        print("🧹 Datos pendientes limpiados\n")
     
     def _save_excel(
         self,
@@ -653,43 +612,148 @@ class ReportGenerator:
         expenses_data: List[Dict],
         income_data: List[Dict]
     ) -> bool:
-        """Guarda Excel"""
+        """Guarda Excel - ✅ FIX ANDROID: Usar método correcto según plataforma"""
+        wb = None
+        
         try:
             if not openpyxl:
+                print(f"      ❌ openpyxl NO está disponible")
                 raise ImportError("openpyxl no disponible")
             
-            print(f"   Creando Excel con {len(trans_data)} transacciones...")
+            print(f"      📊 Iniciando creación de Excel...")
+            print(f"      📝 Transacciones: {len(trans_data)}")
+            print(f"      📍 Ruta destino: {filepath}")
+            print(f"      🤖 Android: {self.is_android}")
             
+            # ✅ PASO 1: Crear workbook en memoria
+            print(f"      🔨 Creando workbook...")
             wb = openpyxl.Workbook()
             
-            # Hoja 1: Resumen
+            # ✅ PASO 2: Hoja Resumen
+            print(f"      📄 Creando hoja 'Resumen'...")
             ws_summary = wb.active
             ws_summary.title = "Resumen"
             self._write_data_to_sheet(ws_summary, summary_data)
+            print(f"      ✓ Resumen creado")
             
-            # Hoja 2: Transacciones
+            # ✅ PASO 3: Hoja Transacciones
+            print(f"      📄 Creando hoja 'Transacciones'...")
             ws_trans = wb.create_sheet("Transacciones")
             self._write_data_to_sheet(ws_trans, trans_data)
+            print(f"      ✓ Transacciones creadas")
             
-            # Hoja 3: Gastos
+            # ✅ PASO 4: Hoja Gastos
             if expenses_data:
+                print(f"      📄 Creando hoja 'Gastos'...")
                 ws_exp = wb.create_sheet("Gastos por Categoría")
                 self._write_data_to_sheet(ws_exp, expenses_data)
+                print(f"      ✓ Gastos creados")
             
-            # Hoja 4: Ingresos
+            # ✅ PASO 5: Hoja Ingresos
             if income_data:
+                print(f"      📄 Creando hoja 'Ingresos'...")
                 ws_inc = wb.create_sheet("Ingresos por Categoría")
                 self._write_data_to_sheet(ws_inc, income_data)
+                print(f"      ✓ Ingresos creados")
             
-            wb.save(filepath)
-            print(f"   ✅ Excel guardado")
+            # ✅ FIX CRÍTICO ANDROID: Guardar primero en BytesIO y luego escribir
+            print(f"      💾 Guardando archivo...")
+            
+            if self.is_android:
+                # ✅ ANDROID: Usar BytesIO intermedio y page.client_storage
+                print(f"      📱 Modo Android: Usando BytesIO + write_bytes")
+                from io import BytesIO
+                
+                # Guardar workbook en memoria
+                buffer = BytesIO()
+                wb.save(buffer)
+                buffer.seek(0)
+                excel_bytes = buffer.read()
+                buffer.close()
+                
+                print(f"      📏 Excel en memoria: {len(excel_bytes)} bytes")
+                
+                # Escribir bytes directamente al archivo
+                with open(filepath, 'wb') as f:
+                    bytes_written = f.write(excel_bytes)
+                    f.flush()
+                    os.fsync(f.fileno())
+                
+                print(f"      ✓ Bytes escritos: {bytes_written}")
+                
+            else:
+                # ✅ DESKTOP: Método tradicional
+                print(f"      💻 Modo Desktop: Guardado directo")
+                with open(filepath, 'wb') as f:
+                    wb.save(f)
+                    f.flush()
+                    os.fsync(f.fileno())
+            
+            print(f"      ✓ Guardado completado")
+            
+            # ✅ PASO 6: Cerrar workbook
+            try:
+                wb.close()
+                print(f"      ✓ Workbook cerrado")
+            except:
+                pass
+            
+            # ✅ PASO 7: ESPERAR (crítico en Android)
+            import time
+            time.sleep(0.5)
+            
+            # ✅ PASO 8: Verificar archivo
+            print(f"      🔍 Verificando archivo creado...")
+            
+            if not os.path.exists(filepath):
+                print(f"      ❌ ERROR: Archivo NO existe")
+                return False
+            
+            file_size = os.path.getsize(filepath)
+            print(f"      📏 Tamaño del archivo: {file_size} bytes")
+            
+            if file_size == 0:
+                print(f"      ❌ ERROR: Archivo vacío (0 bytes)")
+                return False
+            
+            if file_size < 1000:
+                print(f"      ⚠️ ADVERTENCIA: Archivo muy pequeño ({file_size} bytes)")
+            
+            # ✅ PASO 9: Verificar que sea un Excel válido
+            try:
+                test_wb = openpyxl.load_workbook(filepath, read_only=True)
+                test_wb.close()
+                print(f"      ✓ Excel válido verificado")
+            except Exception as verify_err:
+                print(f"      ❌ ERROR: Excel corrupto: {verify_err}")
+                return False
+            
+            print(f"      ✅ Excel guardado exitosamente: {file_size} bytes")
             return True
             
         except Exception as e:
-            print(f"   ❌ Error creando Excel: {e}")
+            print(f"      ❌ EXCEPCIÓN en _save_excel: {e}")
+            print(f"      📋 Tipo de error: {type(e).__name__}")
             import traceback
             traceback.print_exc()
+            
+            # Limpiar archivo corrupto
+            try:
+                if os.path.exists(filepath) and os.path.getsize(filepath) == 0:
+                    os.remove(filepath)
+                    print(f"      🗑️ Archivo vacío eliminado")
+            except:
+                pass
+            
             return False
+        
+        finally:
+            # Asegurar cierre del workbook
+            if wb:
+                try:
+                    wb.close()
+                except:
+                    pass
     
     def _write_data_to_sheet(self, worksheet, data: List[Dict]):
         """Escribe datos en hoja Excel"""
@@ -732,23 +796,55 @@ class ReportGenerator:
             worksheet.column_dimensions[column_letter].width = adjusted_width
     
     def _save_csv(self, filepath: str, trans_data: List[Dict]) -> bool:
-        """Guarda CSV"""
+        """Guarda CSV - ✅ FIX ANDROID"""
         try:
-            print(f"   Creando CSV con {len(trans_data)} transacciones...")
+            print(f"      Creando CSV con {len(trans_data)} transacciones...")
             
             if not trans_data:
                 return False
             
-            with open(filepath, 'w', newline='', encoding='utf-8-sig') as f:
-                writer = csv.DictWriter(f, fieldnames=trans_data[0].keys())
+            if self.is_android:
+                # ✅ ANDROID: Escribir primero en StringIO, luego a archivo
+                print(f"      📱 Modo Android: Usando StringIO + write")
+                from io import StringIO
+                
+                # Crear CSV en memoria
+                buffer = StringIO()
+                writer = csv.DictWriter(buffer, fieldnames=trans_data[0].keys())
                 writer.writeheader()
                 writer.writerows(trans_data)
+                csv_content = buffer.getvalue()
+                buffer.close()
+                
+                # Escribir al archivo
+                with open(filepath, 'w', encoding='utf-8-sig') as f:
+                    f.write(csv_content)
+                    f.flush()
+                    os.fsync(f.fileno())
+            else:
+                # ✅ DESKTOP: Método tradicional
+                print(f"      💻 Modo Desktop: Guardado directo")
+                with open(filepath, 'w', newline='', encoding='utf-8-sig') as f:
+                    writer = csv.DictWriter(f, fieldnames=trans_data[0].keys())
+                    writer.writeheader()
+                    writer.writerows(trans_data)
+                    f.flush()
+                    os.fsync(f.fileno())
             
-            print(f"   ✅ CSV guardado")
-            return True
+            # ✅ Verificar inmediatamente
+            import time
+            time.sleep(0.3)
+            
+            if os.path.exists(filepath):
+                size = os.path.getsize(filepath)
+                print(f"      ✅ CSV guardado: {size} bytes")
+                return size > 0
+            else:
+                print(f"      ❌ Archivo no existe después de guardar")
+                return False
             
         except Exception as e:
-            print(f"   ❌ Error creando CSV: {e}")
+            print(f"      ❌ Error creando CSV: {e}")
             import traceback
             traceback.print_exc()
             return False

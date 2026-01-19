@@ -13,3 +13,5 @@ assets/
 build/*
 src/build/*
 requirements.txt.backup
+build.log
+reporte_test.log

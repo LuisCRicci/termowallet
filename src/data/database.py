@@ -677,17 +677,87 @@ class DatabaseManager:
         return transaction
 
     def add_transactions_bulk(self, transactions_data: List[Dict]) -> int:
-        """Añade múltiples transacciones de una vez"""
+        """
+        ✅ CORREGIDO: Añade múltiples transacciones con manejo correcto de transacciones
+        
+        Args:
+            transactions_data: Lista de diccionarios con datos de transacciones
+        
+        Returns:
+            int: Cantidad de transacciones insertadas exitosamente
+        """
+        if not transactions_data:
+            return 0
+        
         count = 0
-        for data in transactions_data:
-            try:
-                self.add_transaction(**data)
-                count += 1
-            except Exception as e:
-                print(f"Error al añadir transacción: {e}")
-                continue
-
-        return count
+        failed = 0
+        
+        print(f"\n{'='*60}")
+        print(f"📦 INSERTANDO {len(transactions_data)} TRANSACCIONES")
+        print(f"{'='*60}")
+        
+        try:
+            # ✅ Insertar todas a la vez usando bulk_insert_mappings (más eficiente)
+            from datetime import datetime
+            
+            # Preparar datos para bulk insert
+            bulk_data = []
+            for data in transactions_data:
+                try:
+                    # Asegurar que los datos sean válidos
+                    if not data.get("date") or not data.get("description") or not data.get("amount"):
+                        print(f"  ⚠️ Dato incompleto, saltando...")
+                        failed += 1
+                        continue
+                    
+                    # Convertir a formato adecuado
+                    bulk_data.append({
+                        "date": data["date"] if isinstance(data["date"], datetime) else datetime.now(),
+                        "description": str(data["description"]),
+                        "amount": float(data["amount"]),
+                        "category_id": int(data["category_id"]),
+                        "transaction_type": str(data.get("transaction_type", "expense")),
+                        "notes": data.get("notes"),
+                        "source": data.get("source", "imported"),
+                        "original_description": data.get("original_description"),
+                        "created_at": datetime.now(),
+                        "updated_at": datetime.now(),
+                    })
+                    
+                except Exception as item_error:
+                    print(f"  ❌ Error procesando item: {item_error}")
+                    failed += 1
+                    continue
+            
+            if bulk_data:
+                # ✅ Usar bulk_insert_mappings para inserción masiva eficiente
+                self.session.bulk_insert_mappings(Transaction, bulk_data)
+                count = len(bulk_data)
+                
+                print(f"  ✅ {count} transacciones preparadas para inserción")
+            
+            # ✅ NO HACER COMMIT AQUÍ - se hará en el código que llama
+            # Esto permite manejar lotes
+            
+            print(f"{'='*60}")
+            print(f"✅ BULK INSERT COMPLETADO")
+            print(f"   Insertadas: {count}")
+            print(f"   Fallidas: {failed}")
+            print(f"{'='*60}\n")
+            
+            return count
+            
+        except Exception as e:
+            print(f"\n{'='*60}")
+            print(f"❌ ERROR EN BULK INSERT")
+            print(f"{'='*60}")
+            print(f"Error: {e}")
+            import traceback
+            traceback.print_exc()
+            print(f"{'='*60}\n")
+            
+            # ✅ NO hacer rollback aquí - dejar que lo maneje el código superior
+            raise  # Re-lanzar la excepción para que se maneje arriba
 
     def get_all_transactions(self) -> List[Transaction]:
         """Obtiene todas las transacciones ordenadas por fecha descendente"""

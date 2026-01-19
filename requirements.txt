@@ -25,8 +25,24 @@ certifi>=2023.7.22
 # Para compilar APK:
 # flet build apk --verbose
 
+#flet clean
+# Compilación con logging habilitado
+#flet build apk --verbose 2>&1 | tee build.log
+
 #limpieza de caché
 #flet clean
 # Limpiar cache de Python
 #find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null
 #find . -type f -name "*.pyc" -delete 2>/dev/null
+# verificar logs en Android
+#db logcat | grep -i "termowallet\|excel\|csv\|guardando"
+
+# Para generar reporte de logs en Android:
+# adb logcat -c  # Limpiar logs
+# Abre la app y genera el reporte
+# adb logcat > reporte_test.log
+
+#Busca en reporte_test.log
+#grep -A 20 "GUARDANDO ARCHIVO\|_save_excel\|EXCEPCIÓN" reporte_test.log
+# compilación APK con soporte por ABI
+# flet build apk --split-per-abi --verbose

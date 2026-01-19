@@ -216,9 +216,10 @@ class DatabaseManager:
         # Diccionario de palabras clave por defecto para GASTOS
         default_expense_keywords = {
             "Alimentación": [
+                "gr" ," kg ", " kilo ", "kilogramo", "kilogramos", "frutas y verduras",
                 "aceite de cocina", "acelga (criolla/serrana)", "agua", "aguaje", "aji amarillo seco", 
                 "aji escabeche fresco", "aji montaña", "aji paprika", "aji rocoto", "ajo", 
-                "ajo criollo", "ajo morado", "albahaca", "albaricoque", "alcachofa", "almuerzo", 
+                "ajo criollo", "ajo morado", "albahaca", "albaricoque", "alcachofa", "almuerzo", "atun"
                 "antojito", "antojitos", "apio", "arroz", "arveja verde", "atun", "azúcar", 
                 "bakery", "bases en sobre", "batido", "bebida", "beber", "bembos", "berenjena", 
                 "beterraga", "bodega", "brocoli", "butcher", "caigua", "camote", "camu camu", 
@@ -248,7 +249,21 @@ class DatabaseManager:
                 "spaguetti", "supermercado", "tamarindo", "tienda", "tomate", "toronja", "tottus", 
                 "tuna", "uva", "vainita", "vegetales", "verduras", "water", "wong", "yacon", 
                 "yogur", "yogurt", "yuca", "zapallo", "zapallo italiano", "zapallo loche", 
-                "zapallo macre", "zanahoria"
+                "zapallo macre", "zanahoria", "zumo", "venturo", "Molitalia", "D'onofrio"
+                "costilla", "lomo", "pulpa de res", "carne molida", "bife", "asado", "chuleta",
+                "filete", "bistec", "entraña", "picanha", "churrasco", "roast beef", "benoti", "laive","ecco",
+                "Hamburguesa de pollo", "Pechuga de pollo", "Muslo de pollo", "Alitas de pollo",
+                "angel", "cereal", "granola", "muesli", "yogurt griego", "yogur griego"
+                "canela", "clavo de olor", "comino", "nuez moscada", "pimienta", "oregano", "romero",
+                "tomillo", "vainilla","aj-no-men","ajinomoto","sazonador maggi"
+                "aceituna", "aceitunas", "almendra", "anona", "avena", "baya", "costeño","plátano","Cabello de angel"
+                "Incasur", "sol del cusco", "san fernando", "don victoria", "laive","gloria","pascual","nestle"
+                "maracuya", "maracuya", "frambuesa", "arándano", "arándanos", "blueberry", "fresa", "frutilla"
+                "avena" , "mostaza", "ketchup", "mayonesa", "salsa de soja", "salsa inglesa", "aderezo"
+                "bondiola", "jamon", "jamón", "salchicha", "salchichón", "mortadela", "pepperoni", "chorizo"
+                "lechuga", "espinaca", "rúcula", "berro", "acelga", "canónigos", "radicchio", "endibia"
+                "Mc colin's anis", "Mc colin's hierba luisa", "Mc colin's manzanilla", "Mc colin's menta",  "Mc colin's boldo"
+                "lomo fino", "lomo saltado", "aji limo", "aji mirasol", "aji charapita", "aji panca"
             ],
             "Transporte": [
                 "uber", "taxi", "cabify","beat", "gasolina", "gas", "petroleo",
@@ -284,6 +299,7 @@ class DatabaseManager:
                 "glasses", "hospital", "inkafarma", "laboratory", "laboratorio", "lentes", 
                 "medicina", "medicine", "medico", "mifarma", "odontologo", "optica", 
                 "pastilla", "pharmacy", "pill", "terapia", "therapy", "vitamin", "vitamina"
+                "Banda adhesiva", "Betadine", "Curitas", "Desenfriol", "Dolex", "Ibuprofeno",
             ],
             "Educación": [
                 "academia", "ADEX", "Alas Peruanas", "AprendeLibre", "book", "bookstore", 
@@ -314,6 +330,11 @@ class DatabaseManager:
                 "reparacion", "reparaciones", "ropero", "sartenes", "secadora", "silla", 
                 "sillón", "sofá", "taladro", "táper", "terma", "televisor", "tornillos", 
                 "utensilios", "vajilla", "vasos", "ventilador", "vivienda"
+                "clavos", "tornillos", "bisagras", "cemento", "arena", "ladrillos", "bloques",
+                "yeso", "pintura", "pintura impermeabilizante", "sellador", "poliuretano",
+                "pintura acrílica", "pintura esmalte", "pintura epóxica", "pintura vinílica",
+                "pintura látex", "pintura sintética", "pintura texturada"
+                
             ],
             "Vestimenta": [
                 "abrigo", "accesorio", "accesorios", "accessory", "amazon", "anillo", 
@@ -372,6 +393,7 @@ class DatabaseManager:
                 "sanguche", "sanguches", "santa anita", "sarita", "starbucks", "subway", 
                 "sushi", "taco bell", "tamales", "tambo", "terminal pesquero", 
                 "tía grimanesa", "tienda", "tío bobby", "villa chicken", "viva", "vlady"
+                "pyc", "turroncito", "turron","chocotejas", "la iberica", "helados baskin robbins"
             ],
             
             "Hospedaje y viajes": [
@@ -569,9 +591,10 @@ class DatabaseManager:
         # Diccionarios de palabras clave por defecto (mismo que en _initialize_default_keywords)
         default_expense_keywords = {
             "Alimentación": [
+                "gr" ," kg ", " kilo ", "kilogramo", "kilogramos", "frutas y verduras",
                 "aceite de cocina", "acelga (criolla/serrana)", "agua", "aguaje", "aji amarillo seco", 
                 "aji escabeche fresco", "aji montaña", "aji paprika", "aji rocoto", "ajo", 
-                "ajo criollo", "ajo morado", "albahaca", "albaricoque", "alcachofa", "almuerzo", 
+                "ajo criollo", "ajo morado", "albahaca", "albaricoque", "alcachofa", "almuerzo", "atun"
                 "antojito", "antojitos", "apio", "arroz", "arveja verde", "atun", "azúcar", 
                 "bakery", "bases en sobre", "batido", "bebida", "beber", "bembos", "berenjena", 
                 "beterraga", "bodega", "brocoli", "butcher", "caigua", "camote", "camu camu", 
@@ -601,7 +624,21 @@ class DatabaseManager:
                 "spaguetti", "supermercado", "tamarindo", "tienda", "tomate", "toronja", "tottus", 
                 "tuna", "uva", "vainita", "vegetales", "verduras", "water", "wong", "yacon", 
                 "yogur", "yogurt", "yuca", "zapallo", "zapallo italiano", "zapallo loche", 
-                "zapallo macre", "zanahoria"
+                "zapallo macre", "zanahoria", "zumo", "venturo", "Molitalia", "D'onofrio"
+                "costilla", "lomo", "pulpa de res", "carne molida", "bife", "asado", "chuleta",
+                "filete", "bistec", "entraña", "picanha", "churrasco", "roast beef", "benoti", "laive","ecco",
+                "Hamburguesa de pollo", "Pechuga de pollo", "Muslo de pollo", "Alitas de pollo",
+                "angel", "cereal", "granola", "muesli", "yogurt griego", "yogur griego"
+                "canela", "clavo de olor", "comino", "nuez moscada", "pimienta", "oregano", "romero",
+                "tomillo", "vainilla","aj-no-men","ajinomoto","sazonador maggi"
+                "aceituna", "aceitunas", "almendra", "anona", "avena", "baya", "costeño","plátano","Cabello de angel"
+                "Incasur", "sol del cusco", "san fernando", "don victoria", "laive","gloria","pascual","nestle"
+                "maracuya", "maracuya", "frambuesa", "arándano", "arándanos", "blueberry", "fresa", "frutilla"
+                "avena" , "mostaza", "ketchup", "mayonesa", "salsa de soja", "salsa inglesa", "aderezo"
+                "bondiola", "jamon", "jamón", "salchicha", "salchichón", "mortadela", "pepperoni", "chorizo"
+                "lechuga", "espinaca", "rúcula", "berro", "acelga", "canónigos", "radicchio", "endibia"
+                "Mc colin's anis", "Mc colin's hierba luisa", "Mc colin's manzanilla", "Mc colin's menta",  "Mc colin's boldo"
+                "lomo fino", "lomo saltado", "aji limo", "aji mirasol", "aji charapita", "aji panca"
             ],
             "Transporte": [
                 "uber", "taxi", "cabify","beat", "gasolina", "gas", "petroleo",
@@ -637,6 +674,7 @@ class DatabaseManager:
                 "glasses", "hospital", "inkafarma", "laboratory", "laboratorio", "lentes", 
                 "medicina", "medicine", "medico", "mifarma", "odontologo", "optica", 
                 "pastilla", "pharmacy", "pill", "terapia", "therapy", "vitamin", "vitamina"
+                "Banda adhesiva", "Betadine", "Curitas", "Desenfriol", "Dolex", "Ibuprofeno",
             ],
             "Educación": [
                 "academia", "ADEX", "Alas Peruanas", "AprendeLibre", "book", "bookstore", 
@@ -667,6 +705,11 @@ class DatabaseManager:
                 "reparacion", "reparaciones", "ropero", "sartenes", "secadora", "silla", 
                 "sillón", "sofá", "taladro", "táper", "terma", "televisor", "tornillos", 
                 "utensilios", "vajilla", "vasos", "ventilador", "vivienda"
+                "clavos", "tornillos", "bisagras", "cemento", "arena", "ladrillos", "bloques",
+                "yeso", "pintura", "pintura impermeabilizante", "sellador", "poliuretano",
+                "pintura acrílica", "pintura esmalte", "pintura epóxica", "pintura vinílica",
+                "pintura látex", "pintura sintética", "pintura texturada"
+                
             ],
             "Vestimenta": [
                 "abrigo", "accesorio", "accesorios", "accessory", "amazon", "anillo", 
@@ -725,6 +768,7 @@ class DatabaseManager:
                 "sanguche", "sanguches", "santa anita", "sarita", "starbucks", "subway", 
                 "sushi", "taco bell", "tamales", "tambo", "terminal pesquero", 
                 "tía grimanesa", "tienda", "tío bobby", "villa chicken", "viva", "vlady"
+                "pyc", "turroncito", "turron","chocotejas", "la iberica", "helados baskin robbins"
             ],
             
             "Hospedaje y viajes": [

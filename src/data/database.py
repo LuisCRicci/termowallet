@@ -50,7 +50,7 @@ class DatabaseManager:
                     color="#ef4444",
                     category_type="expense",
                     is_default=True,
-                    description="Comida, restaurantes, supermercado",
+                    description="Comida, supermercado",
                 ),
                 Category(
                     name="Transporte",
@@ -93,7 +93,7 @@ class DatabaseManager:
                     description="Cursos, libros, universidad",
                 ),
                 Category(
-                    name="Vivienda",
+                    name="Vivienda y equipos",
                     icon="🏠",
                     color="#84cc16",
                     category_type="expense",
@@ -101,13 +101,59 @@ class DatabaseManager:
                     description="Alquiler, reparaciones, mantenimiento",
                 ),
                 Category(
-                    name="Compras",
+                    name="Vestimenta",
                     icon="🛍️",
                     color="#ec4899",
                     category_type="expense",
                     is_default=True,
                     description="Ropa, zapatos, accesorios",
                 ),
+                
+                Category(
+                    name="Comunicaciones",
+                    icon="📱",
+                    color="#6648ec",
+                    category_type="expense",
+                    is_default=True,
+                    description="Telfonía, Internet, Cable",
+                ),
+                
+                Category(
+                    name="Restaurantes y gastronomía",
+                    icon="🍽️",
+                    color="#ec9a48",
+                    category_type="expense",
+                    is_default=True,
+                    description="Restaurantes, comida ambulante, gastronomía",
+                ),
+                
+                Category(
+                    name="Hospedaje y viajes",
+                    icon="✈️",
+                    color="#15a8d0",
+                    category_type="expense",
+                    is_default=True,
+                    description="Hoteles y viajes",
+                ),
+                
+                Category(
+                    name="Vicios y hobbies",
+                    icon="🎲",
+                    color="#15a8d0",
+                    category_type="expense",
+                    is_default=True,
+                    description="Alcohol, tabaco, juegos, hobbies",
+                ),
+                
+                Category(
+                    name="Higiene/Cuidado personal",
+                    icon="🧼",
+                    color="#b4e3f0",
+                    category_type="expense",
+                    is_default=True,
+                    description="Higiene, cuidado personal, belleza",
+                ),
+                
                 Category(
                     name="Otros Gastos",
                     icon="💸",
@@ -116,6 +162,9 @@ class DatabaseManager:
                     is_default=True,
                     description="Gastos varios",
                 ),
+                
+                
+                
                 # Categorías de Ingresos
                 Category(
                     name="Salario",
@@ -167,32 +216,47 @@ class DatabaseManager:
         # Diccionario de palabras clave por defecto para GASTOS
         default_expense_keywords = {
             "Alimentación": [
-                "restaurant", "comida", "food", "pizza", "burger", "cafe", "cafeteria",
-                "supermercado", "market", "panaderia", "bakery", "almuerzo", "lunch",
-                "cena", "dinner", "desayuno", "breakfast", "bar", "pub", "mcdonalds",
-                "kfc", "starbucks", "subway", "pollo", "chicken", "bebida", "drink",
-                "cerveza", "beer", "mercado", "bodega", "tienda", "grocery", "bembos",
-                "norky", "china wok", "delivery", "papa rellena", "cevicheria",
-                "polleria", "hamburgueseria", "ceviche", "pollo a la brasa", "chifa",
-                "hamburguesa", "sushi", "anticuchos", "picanteria", "empanadas",
-                "tamales", "churros", "donas", "donuts", "helados", "ice cream",
-                "yogurt", "frozen yogurt", "frutas", "verduras", "vegetales",
-                "carniceria", "butcher", "picarones", "chocolateria", "dulceria",
-                "snacks", "antojitos", "chocolates", "golosinas", "chocolate",
-                "golosina", "snack", "antojito", "salchipapa", "salchipapas",
-                "empanada", "piqueo", "piqueos", "chifles", "papas fritas",
-                "papas a la francesa", "chicharrones", "nachos", "hot dog", "hotdog",
-                "sandwich", "sanguches", "chizitos", "gaseosa", "soda", "refresco",
-                "refrescos", "jugo", "juice", "smoothie", "batido", "agua", "water",
-                "leche", "milk", "yogur", "metro", "wong", "tottus", "plaza vea", "mass"
+                "aceite de cocina", "acelga (criolla/serrana)", "agua", "aguaje", "aji amarillo seco", 
+                "aji escabeche fresco", "aji montaña", "aji paprika", "aji rocoto", "ajo", 
+                "ajo criollo", "ajo morado", "albahaca", "albaricoque", "alcachofa", "almuerzo", 
+                "antojito", "antojitos", "apio", "arroz", "arveja verde", "atun", "azúcar", 
+                "bakery", "bases en sobre", "batido", "bebida", "beber", "bembos", "berenjena", 
+                "beterraga", "bodega", "brocoli", "butcher", "caigua", "camote", "camu camu", 
+                "carambola", "carne de res", "carniceria", "cebolla", "cebolla china", "cereales", 
+                "chifles", "chirimoya", "chizitos", "chocolate", "chocolateria", 
+                "chocolates", "chocolates y dulces", "choclo", "chuño", "ciruela", "coco", 
+                "cocona", "col china", "col corazon", "coliflor", "comida", "coronta de maíz", 
+                "culantro", "drink", "dulceria", "empanada", "esparrago fresco", "especias", 
+                "espinaca", "fideos", "food", "frejol", "frejolito chino", "fresa", "frijol", 
+                "frijol verde", "frozen yogurt", "frutas", "frutas tropicales", "galletas", 
+                "galletas dulces", "galletas saladas", "gaseosa", "golosina", "golosinas", 
+                "granadilla", "granada", "guanabana", "grocery", "haba verde", "harina", 
+                "hierba buena", "higo", "holantau", "horganica", "hortalizas", "hortalizas de fruto", 
+                "hortalizas de hoja o de tallo", "hortalizas de raíz", "hortalizas leguminosas verdes", 
+                "hot dog", "hotdog", "huacatay", "huevos", "juice", "jugo", "kion", "kiwi", 
+                "leche", "lechuga americana (criolla/serrana)", "lechuga criolla seda", 
+                "lechuga romana hidropónica", "lenteja", "lima", "limon", "longapa", "lunch", 
+                "lúcuma", "maiz marlo", "maiz morado", "mamey", "mandarina", "mango", "manzana", 
+                "maracuyá", "market", "mass", "membrillo", "melon", "melon coquito", "melones", 
+                "melocotón", "mercado", "metro", "milk", "nabo", "nachos", "naranja", "nueces", 
+                "olluco", "pacchoy", "palta", "pallar verde", "panaderia", "panes y derivados", 
+                "papa", "papa fritas", "papas a la francesa", "papas fritas", "papaya", "pepinillo", 
+                "pepino", "pera", "perejil", "pescado", "picarones", "pimiento", "piqueo", 
+                "piqueos", "piña", "platano", "plaza vea", "pollo", "poro", "rabanito", "refresco", 
+                "refrescos", "restaurant", "salchipapa", "salchipapas", "salsas", "sandwich", 
+                "sanguches", "sandia", "sazonadores", "smoothie", "snack", "snacks", "soda", 
+                "spaguetti", "supermercado", "tamarindo", "tienda", "tomate", "toronja", "tottus", 
+                "tuna", "uva", "vainita", "vegetales", "verduras", "water", "wong", "yacon", 
+                "yogur", "yogurt", "yuca", "zapallo", "zapallo italiano", "zapallo loche", 
+                "zapallo macre", "zanahoria"
             ],
             "Transporte": [
-                "uber", "taxi", "cabify", "beat", "gasolina", "gas", "petroleo",
+                "uber", "taxi", "cabify","beat", "gasolina", "gas", "petroleo",
                 "grifo", "station", "parking", "estacionamiento", "peaje", "toll",
                 "bus", "metro", "tren", "train", "vuelo", "flight", "avianca",
                 "latam", "transporte", "transport", "movilidad", "pasaje", "ticket",
                 "combustible", "fuel", "mecanico", "mechanic", "repuesto", "llanta",
-                "tire", "revision", "tecnica"
+                "tire", "revision", "tecnica" , "Metropolitano" 
             ],
             "Entretenimiento": [
                 "cine", "cinema", "movie", "netflix", "spotify", "amazon prime",
@@ -200,7 +264,11 @@ class DatabaseManager:
                 "game", "concierto", "concert", "teatro", "theater", "club",
                 "discoteca", "disco", "bar", "karaoke", "bowling", "gimnasio", "gym",
                 "deporte", "sport", "entrada", "ticket", "suscripcion",
-                "subscription", "youtube", "twitch"
+                "subscription", "youtube", "twitch",
+                "pelicula", "film", "videojuego", "gaming", "partido", "match",
+                "evento", "event", "festival", "festival de musica", "stand up",
+                "comedia", "comedy", "museo", "museum", "exposicion", "exhibition"  
+                
             ],
             "Servicios": [
                 "luz", "electricity", "agua", "water", "internet", "telefono",
@@ -211,35 +279,156 @@ class DatabaseManager:
                 "peluqueria", "salon", "barberia"
             ],
             "Salud": [
-                "farmacia", "pharmacy", "doctor", "medico", "clinica", "clinic",
-                "hospital", "dentista", "dentist", "odontologo", "medicina",
-                "medicine", "pastilla", "pill", "vitamina", "vitamin", "laboratorio",
-                "laboratory", "analisis", "examen", "exam", "consulta",
-                "consultation", "terapia", "therapy", "inkafarma", "mifarma",
-                "botica", "optica", "lentes", "glasses"
+                "analisis", "botica", "clinic", "clinica", "consulta", "consulta particular", 
+                "consultation", "dentist", "dentista", "doctor", "exam", "examen", "farmacia", 
+                "glasses", "hospital", "inkafarma", "laboratory", "laboratorio", "lentes", 
+                "medicina", "medicine", "medico", "mifarma", "odontologo", "optica", 
+                "pastilla", "pharmacy", "pill", "terapia", "therapy", "vitamin", "vitamina"
             ],
             "Educación": [
-                "universidad", "university", "colegio", "school", "academia",
-                "institute", "curso", "course", "clase", "class", "libro", "book",
-                "libreria", "bookstore", "capacitacion", "training", "certificacion",
-                "certification", "matricula", "tuition", "pension", "mensualidad",
-                "cuota", "estudios", "tesis", "materiales", "utiles", "supplies"
+                "academia", "ADEX", "Alas Peruanas", "AprendeLibre", "book", "bookstore", 
+                "capacitacion", "Cayetano Heredia", "CENFOTEC", "certification", "certificacion", 
+                "César Vallejo", "CIBERTEC", "class", "clase", "colegio", "colegio primaria", 
+                "colegio secundaria", "course", "curso", "Crehana", "cuota", "Cursera", 
+                "Domestika", "estudios", "IDAT", "IESTP", "INFOCAP", "institute", "Instituto", 
+                "Instituto continental", "ISAT", "ISIL", "libreria", "libro", "materiales", 
+                "matricula", "mensualidad", "pension", "school", "SENATI", "SISE", "supplies", 
+                "tesis", "training", "tuition", "UCSP", "UCSM", "UCV", "UNALM", "UNE", 
+                "UNFV", "UNI", "UNMSM", "universidad", "university", "Universidad Nacional del Callao", 
+                "Universidad privada", "Universidad pública", "UNTELS", "UPN", "utiles", "UTP"
             ],
             "Vivienda": [
-                "alquiler", "rent", "arrendamiento", "inmobiliaria", "casa",
-                "departamento", "apartment", "condominio", "mantenimiento",
-                "reparacion", "pintura", "paint", "constructor", "albanil",
-                "gasfitero", "plumber", "electricista", "electrician", "ferreteria",
-                "hardware", "mueble", "furniture", "decoracion"
+                "aire acondicionado", "albanil", "albañil", "alicates", "alfombra", 
+                "alquiler", "apartment", "arrendamiento", "aspiradora", "bombilla", 
+                "cafetera", "calentador", "cama", "casa", "clavos", "cocina", "colchón", 
+                "condominio", "constructor", "copas", "cómoda", "cortinas", "cuadro", 
+                "cubiertos", "decoracion", "decoración", "departamento", "destornillador", 
+                "electrician", "electricista", "electrodomésticos", "enseres", "equipo de sonido", 
+                "equipos", "escalera", "escritorio", "espejo", "estante", "estufa", 
+                "ferreteria", "ferretería", "foco", "furniture", "gasfitero", "hardware", 
+                "herramientas", "hielera", "hipoteca", "hogar", "iluminación", "inmobiliaria", 
+                "jardinería", "lámpara", "lavadora", "licuadora", "librero", "limpieza", 
+                "llave inglesa", "mantenimiento", "martillo", "menajería", "mesa", 
+                "microondas", "mueble", "muebles", "ollas", "paint", "parlante", "pintado", 
+                "pintura", "platos", "plumber", "pyrex", "refrigeradora", "rent", "renta", 
+                "reparacion", "reparaciones", "ropero", "sartenes", "secadora", "silla", 
+                "sillón", "sofá", "taladro", "táper", "terma", "televisor", "tornillos", 
+                "utensilios", "vajilla", "vasos", "ventilador", "vivienda"
             ],
-            "Compras": [
-                "ropa", "clothes", "zapateria", "shoes", "tienda", "store", "mall",
-                "plaza", "boutique", "zara", "h&m", "forever21", "saga", "ripley",
-                "falabella", "oechsle", "paris", "amazon", "ebay", "mercadolibre",
-                "jockey", "real plaza", "cosmetico", "perfume", "maquillaje",
-                "makeup", "accesorio", "accessory", "reloj", "watch", "joya",
-                "jewelry", "regalo", "gift"
+            "Vestimenta": [
+                "abrigo", "accesorio", "accesorios", "accessory", "amazon", "anillo", 
+                "aretes", "arreglo", "bañador", "bata", "bermuda", "bikini", "billetera", 
+                "blusa", "bolso", "botas", "botines", "boutique", "bóxer", "brasier", 
+                "bufanda", "buzo", "calcetines", "calzado", "calzoncillo", "camisa", 
+                "camiseta", "cartera", "casaca", "chaleco", "chaqueta", "chompa", 
+                "cinturón", "clothes", "collar", "corbata", "correa", "costura", "denim", 
+                "deporte", "ebay", "enterizo", "entrenamiento", "falabella", "falda", 
+                "forever21", "gafas", "gift", "gorra", "gorro", "guantes", "gym", "h&m", 
+                "jean", "jewelry", "jockey", "joya", "joyas", "joyería", "lavandería", 
+                "leggings", "lentes", "makeup", "mall", "mantenimiento", "medias", 
+                "mercadolibre", "moccasines", "mochila", "moda", "natación", "oechsle", 
+                "outfit", "pantalón", "pantuflas", "paris", "pijama", "plaza", "polera", 
+                "polo", "prenda", "pulsera", "real plaza", "regalo", "reloj", "ripley", 
+                "ropa", "ropa deportiva", "ropa interior", "saco", "saga", "sandalias", 
+                "sastre", "sastrería", "shoes", "short", "sombrero", "sostén", "store", 
+                "suéter", "tacos", "terno", "textil", "tienda", "tintorería", "traje", 
+                "truza", "vestido", "vestimenta", "vestir", "watch", "zapatillas", 
+                "zapatero", "zapateria", "zapatos", "zara"
             ],
+
+            "Comunicaciones": [ 
+                "cable", "celular", "internet", "mobile", "phone", "telefono",
+                "tv", "telfonía", "claro", "entel", "bitel", "movistar", "starlink",
+                "cablevisión", "directv", 
+                "fibertel", "telecom", "telefonía", "telefonía móvil", "telefonía fija"
+            ],
+            
+            "Restaurantes y gastronomía": [
+                "alfresco", "almuerzo", "anticuchería", "anticuchos", "antojito", "asado", 
+                "bacán", "bar", "barra cevichera", "beber", "bembos", "blanca flor", 
+                "bodega", "breakfast", "burger", "burger king", "butifarra", "caminos del inca", 
+                "capriccio", "carl's jr", "carrito", "cebichería", "cevicheria", "ceviche", 
+                "chicha", "chicha morada", "chifa", "china wok", "chinawok", "chicharrones", 
+                "churros", "comida ambulante", "cena", "cerveza", "chicken", "d'onofrio", 
+                "delivery", "desayuno", "desayuno al paso", "didi food", "dinner", 
+                "domino's", "domo saltado", "don belisario", "donas", "donofrio", 
+                "donuts", "doomo saltado", "drink", "dunkin", "el buen gusto", "el chinito", 
+                "el muelle", "el pez on", "emoliente", "emolientero", "empanada", 
+                "empanadas", "empanadas paulistas", "food truck", "galletas", "grimanesa", 
+                "hamburguesa", "hamburguesería", "helados", "hikari", "ice cream", 
+                "jockey plaza", "kentucky", "kfc", "kiosko", "la casa de las empanadas", 
+                "la ibérica", "la iberica", "la leña", "la lucha", "la panca", "la rambla", 
+                "larcomar", "las canastas", "leche de tigre", "listo", "little caesars", 
+                "lunch", "macuca", "mall aventura", "mall del sur", "marisquería", 
+                "mcdonald's", "mcdonalds", "mediterraneo", "megaplaza", "mi barrunto", 
+                "minka", "minimarket", "munchis", "niqqu", "norky", "norkys", "open plaza", 
+                "otto grill", "oxxo", "pan con chicharrón", "papa john's", "papa rellena", 
+                "pardos chicken", "pasquale", "pecsa", "pedidosya", "perros y papas", 
+                "pescados capitales", "picanteria", "picarones", "piqueo", "piqueos", 
+                "pizza", "pizza hut", "plaza norte", "plaza san miguel", "pollo", 
+                "pollo a la brasa", "polleria", "popeyes", "pub", "punto azul", "puruchuco", 
+                "quiosco", "quinua", "rappi", "real plaza", "repsol shop", "restaurant", 
+                "rockys", "salaverry", "salchipapa", "salchipapas", "sanguchería", 
+                "sanguche", "sanguches", "santa anita", "sarita", "starbucks", "subway", 
+                "sushi", "taco bell", "tamales", "tambo", "terminal pesquero", 
+                "tía grimanesa", "tienda", "tío bobby", "villa chicken", "viva", "vlady"
+            ],
+            
+            "Hospedaje y viajes": [
+                "aeropuerto", "airbnb", "albergue", "alojamiento", "asia", "backpackers", 
+                "boleto", "booking", "cama", "canta", "churín", "cial", "clase ejecutiva", 
+                "costamar", "cruz del sur", "cusco", "despegar", "equipaje", "estancia", 
+                "excursión", "expedia", "full day", "habitación", "hospedaje", "hostal", 
+                "hotel", "inca rail", "itssa", "jetsmart", "jorge chávez", "lap", "latam", 
+                "lunahuaná", "machu picchu", "mancora", "motel", "móvil bus", "nuevo mundo", 
+                "oltursa", "paracas", "pasaje", "peru rail", "perubus", "posada", "redbus", 
+                "resort", "sky", "soyuz", "star perú", "suite", "tarapoto", "tepsa", 
+                "tour", "trivago", "turismo", "vacaciones", "viaje", "viva air", "vuelo"
+                
+            ],
+            
+            "Vicios y hobbies": [
+                "cerveza", "beer", "alcohol", "tabaco", "juegos", "hobbies",
+                "apuestas", "atlantic city", "bar", "betano", "betsson", "cartavio", 
+                "casino", "cerveza", "cigarro", "cigarrillo", "cocktail", "corona", 
+                "cristal", "cusqueña", "discoteca", "encendedor", "fiesta casino", 
+                "flor de caña", "ganadiario", "gin", "hamilton", "heineken", "inkabet", 
+                "inkabet", "johnnie walker", "licor", "lotería", "lucky strike", 
+                "majestic", "marlboro", "pilsen", "pisco", "queirolo", "ron", 
+                "tabaco", "tabernero", "tacama", "te apuesto", "tinka", "vape", 
+                "vapeador", "vino", "vodka", "whisky"
+                
+            ],
+            
+            "Higiene/Cuidado personal": [
+                "acondicionador", "afeitado", "algodón", "amarige", "aruma", "aussie", "avené", 
+                "avene", "avon", "axe", "babysec", "barba", "barber shop", "barbería", 
+                "belcorp", "belleza", "bioderma", "biogreen", "botica", "boticas perú", 
+                "burt's bees", "calvin klein", "cantu", "carefree", "carol's daughter", 
+                "cepa menstrual", "cepillo", "cerave", "cetaphil", "champú", "clean & clear", 
+                "clínica", "clinique", "colgate", "copa menstrual", "cortaúñas", "crema", 
+                "cuidado personal", "cyzone", "dentito", "dentífrico", "depilación", 
+                "desodorante", "dove", "dove men+care", "dr. bronner's", "e.l.f. cosmetics", 
+                "efasit", "elite", "elvive", "enjuague bucal", "ésika", "esika", "essence", 
+                "especialista", "eucerin", "farmacia", "fenty beauty", "garnier", "gillette", 
+                "glossier", "gnc", "h&s", "head & shoulders", "herbal essences", "herbivore", 
+                "hies", "higiene", "higiene femenina", "hinds", "huggies", "inkafarma", 
+                "isdin", "jabón", "johnson's", "johnsons", "kérastase", "kolynos", "kotex", 
+                "l'bel", "lbel", "l'oreal", "labnutrition", "lactacyd", "lady speed stick", 
+                "la roche posay", "laura mercier", "listerine", "loción", "lubriderm", 
+                "lush", "manicura", "maquillaje", "marco aldany", "maybelline", "mifarma", 
+                "montalvo", "moroccanoil", "natura", "neutrogena", "nivea", "nivea men", 
+                "nosotras", "nyx", "ob", "old spice", "oral-b", "oriflame", "pacifica", 
+                "pampers", "pantene", "pañales", "pañitos húmedos", "papel higiénico", 
+                "paracas", "pasta dental", "pedicura", "peluquería", "perfume", "philosophy", 
+                "pixi", "pro", "rekamier", "rexona", "sally beauty", "salón de belleza", 
+                "savital", "schick", "sedal", "sensodyne", "sephora", "shampoo", "soho", 
+                "spa", "speed stick", "st. ives", "suave", "talco", "tampones", "tarte", 
+                "the body shop", "toallas higiénicas", "too faced", "unique", "urban decay", 
+                "vasenol", "vichy", "yanbal", "yodora"
+                
+            ],
+            
             "Otros Gastos": []
         }
         
@@ -380,32 +569,47 @@ class DatabaseManager:
         # Diccionarios de palabras clave por defecto (mismo que en _initialize_default_keywords)
         default_expense_keywords = {
             "Alimentación": [
-                "restaurant", "comida", "food", "pizza", "burger", "cafe", "cafeteria",
-                "supermercado", "market", "panaderia", "bakery", "almuerzo", "lunch",
-                "cena", "dinner", "desayuno", "breakfast", "bar", "pub", "mcdonalds",
-                "kfc", "starbucks", "subway", "pollo", "chicken", "bebida", "drink",
-                "cerveza", "beer", "mercado", "bodega", "tienda", "grocery", "bembos",
-                "norky", "china wok", "delivery", "papa rellena", "cevicheria",
-                "polleria", "hamburgueseria", "ceviche", "pollo a la brasa", "chifa",
-                "hamburguesa", "sushi", "anticuchos", "picanteria", "empanadas",
-                "tamales", "churros", "donas", "donuts", "helados", "ice cream",
-                "yogurt", "frozen yogurt", "frutas", "verduras", "vegetales",
-                "carniceria", "butcher", "picarones", "chocolateria", "dulceria",
-                "snacks", "antojitos", "chocolates", "golosinas", "chocolate",
-                "golosina", "snack", "antojito", "salchipapa", "salchipapas",
-                "empanada", "piqueo", "piqueos", "chifles", "papas fritas",
-                "papas a la francesa", "chicharrones", "nachos", "hot dog", "hotdog",
-                "sandwich", "sanguches", "chizitos", "gaseosa", "soda", "refresco",
-                "refrescos", "jugo", "juice", "smoothie", "batido", "agua", "water",
-                "leche", "milk", "yogur", "metro", "wong", "tottus", "plaza vea", "mass"
+                "aceite de cocina", "acelga (criolla/serrana)", "agua", "aguaje", "aji amarillo seco", 
+                "aji escabeche fresco", "aji montaña", "aji paprika", "aji rocoto", "ajo", 
+                "ajo criollo", "ajo morado", "albahaca", "albaricoque", "alcachofa", "almuerzo", 
+                "antojito", "antojitos", "apio", "arroz", "arveja verde", "atun", "azúcar", 
+                "bakery", "bases en sobre", "batido", "bebida", "beber", "bembos", "berenjena", 
+                "beterraga", "bodega", "brocoli", "butcher", "caigua", "camote", "camu camu", 
+                "carambola", "carne de res", "carniceria", "cebolla", "cebolla china", "cereales", 
+                "chifles", "chirimoya", "chizitos", "chocolate", "chocolateria", 
+                "chocolates", "chocolates y dulces", "choclo", "chuño", "ciruela", "coco", 
+                "cocona", "col china", "col corazon", "coliflor", "comida", "coronta de maíz", 
+                "culantro", "drink", "dulceria", "empanada", "esparrago fresco", "especias", 
+                "espinaca", "fideos", "food", "frejol", "frejolito chino", "fresa", "frijol", 
+                "frijol verde", "frozen yogurt", "frutas", "frutas tropicales", "galletas", 
+                "galletas dulces", "galletas saladas", "gaseosa", "golosina", "golosinas", 
+                "granadilla", "granada", "guanabana", "grocery", "haba verde", "harina", 
+                "hierba buena", "higo", "holantau", "horganica", "hortalizas", "hortalizas de fruto", 
+                "hortalizas de hoja o de tallo", "hortalizas de raíz", "hortalizas leguminosas verdes", 
+                "hot dog", "hotdog", "huacatay", "huevos", "juice", "jugo", "kion", "kiwi", 
+                "leche", "lechuga americana (criolla/serrana)", "lechuga criolla seda", 
+                "lechuga romana hidropónica", "lenteja", "lima", "limon", "longapa", "lunch", 
+                "lúcuma", "maiz marlo", "maiz morado", "mamey", "mandarina", "mango", "manzana", 
+                "maracuyá", "market", "mass", "membrillo", "melon", "melon coquito", "melones", 
+                "melocotón", "mercado", "metro", "milk", "nabo", "nachos", "naranja", "nueces", 
+                "olluco", "pacchoy", "palta", "pallar verde", "panaderia", "panes y derivados", 
+                "papa", "papa fritas", "papas a la francesa", "papas fritas", "papaya", "pepinillo", 
+                "pepino", "pera", "perejil", "pescado", "picarones", "pimiento", "piqueo", 
+                "piqueos", "piña", "platano", "plaza vea", "pollo", "poro", "rabanito", "refresco", 
+                "refrescos", "restaurant", "salchipapa", "salchipapas", "salsas", "sandwich", 
+                "sanguches", "sandia", "sazonadores", "smoothie", "snack", "snacks", "soda", 
+                "spaguetti", "supermercado", "tamarindo", "tienda", "tomate", "toronja", "tottus", 
+                "tuna", "uva", "vainita", "vegetales", "verduras", "water", "wong", "yacon", 
+                "yogur", "yogurt", "yuca", "zapallo", "zapallo italiano", "zapallo loche", 
+                "zapallo macre", "zanahoria"
             ],
             "Transporte": [
-                "uber", "taxi", "cabify", "beat", "gasolina", "gas", "petroleo",
+                "uber", "taxi", "cabify","beat", "gasolina", "gas", "petroleo",
                 "grifo", "station", "parking", "estacionamiento", "peaje", "toll",
                 "bus", "metro", "tren", "train", "vuelo", "flight", "avianca",
                 "latam", "transporte", "transport", "movilidad", "pasaje", "ticket",
                 "combustible", "fuel", "mecanico", "mechanic", "repuesto", "llanta",
-                "tire", "revision", "tecnica"
+                "tire", "revision", "tecnica" , "Metropolitano" 
             ],
             "Entretenimiento": [
                 "cine", "cinema", "movie", "netflix", "spotify", "amazon prime",
@@ -413,7 +617,11 @@ class DatabaseManager:
                 "game", "concierto", "concert", "teatro", "theater", "club",
                 "discoteca", "disco", "bar", "karaoke", "bowling", "gimnasio", "gym",
                 "deporte", "sport", "entrada", "ticket", "suscripcion",
-                "subscription", "youtube", "twitch"
+                "subscription", "youtube", "twitch",
+                "pelicula", "film", "videojuego", "gaming", "partido", "match",
+                "evento", "event", "festival", "festival de musica", "stand up",
+                "comedia", "comedy", "museo", "museum", "exposicion", "exhibition"  
+                
             ],
             "Servicios": [
                 "luz", "electricity", "agua", "water", "internet", "telefono",
@@ -424,35 +632,156 @@ class DatabaseManager:
                 "peluqueria", "salon", "barberia"
             ],
             "Salud": [
-                "farmacia", "pharmacy", "doctor", "medico", "clinica", "clinic",
-                "hospital", "dentista", "dentist", "odontologo", "medicina",
-                "medicine", "pastilla", "pill", "vitamina", "vitamin", "laboratorio",
-                "laboratory", "analisis", "examen", "exam", "consulta",
-                "consultation", "terapia", "therapy", "inkafarma", "mifarma",
-                "botica", "optica", "lentes", "glasses"
+                "analisis", "botica", "clinic", "clinica", "consulta", "consulta particular", 
+                "consultation", "dentist", "dentista", "doctor", "exam", "examen", "farmacia", 
+                "glasses", "hospital", "inkafarma", "laboratory", "laboratorio", "lentes", 
+                "medicina", "medicine", "medico", "mifarma", "odontologo", "optica", 
+                "pastilla", "pharmacy", "pill", "terapia", "therapy", "vitamin", "vitamina"
             ],
             "Educación": [
-                "universidad", "university", "colegio", "school", "academia",
-                "institute", "curso", "course", "clase", "class", "libro", "book",
-                "libreria", "bookstore", "capacitacion", "training", "certificacion",
-                "certification", "matricula", "tuition", "pension", "mensualidad",
-                "cuota", "estudios", "tesis", "materiales", "utiles", "supplies"
+                "academia", "ADEX", "Alas Peruanas", "AprendeLibre", "book", "bookstore", 
+                "capacitacion", "Cayetano Heredia", "CENFOTEC", "certification", "certificacion", 
+                "César Vallejo", "CIBERTEC", "class", "clase", "colegio", "colegio primaria", 
+                "colegio secundaria", "course", "curso", "Crehana", "cuota", "Cursera", 
+                "Domestika", "estudios", "IDAT", "IESTP", "INFOCAP", "institute", "Instituto", 
+                "Instituto continental", "ISAT", "ISIL", "libreria", "libro", "materiales", 
+                "matricula", "mensualidad", "pension", "school", "SENATI", "SISE", "supplies", 
+                "tesis", "training", "tuition", "UCSP", "UCSM", "UCV", "UNALM", "UNE", 
+                "UNFV", "UNI", "UNMSM", "universidad", "university", "Universidad Nacional del Callao", 
+                "Universidad privada", "Universidad pública", "UNTELS", "UPN", "utiles", "UTP"
             ],
             "Vivienda": [
-                "alquiler", "rent", "arrendamiento", "inmobiliaria", "casa",
-                "departamento", "apartment", "condominio", "mantenimiento",
-                "reparacion", "pintura", "paint", "constructor", "albanil",
-                "gasfitero", "plumber", "electricista", "electrician", "ferreteria",
-                "hardware", "mueble", "furniture", "decoracion"
+                "aire acondicionado", "albanil", "albañil", "alicates", "alfombra", 
+                "alquiler", "apartment", "arrendamiento", "aspiradora", "bombilla", 
+                "cafetera", "calentador", "cama", "casa", "clavos", "cocina", "colchón", 
+                "condominio", "constructor", "copas", "cómoda", "cortinas", "cuadro", 
+                "cubiertos", "decoracion", "decoración", "departamento", "destornillador", 
+                "electrician", "electricista", "electrodomésticos", "enseres", "equipo de sonido", 
+                "equipos", "escalera", "escritorio", "espejo", "estante", "estufa", 
+                "ferreteria", "ferretería", "foco", "furniture", "gasfitero", "hardware", 
+                "herramientas", "hielera", "hipoteca", "hogar", "iluminación", "inmobiliaria", 
+                "jardinería", "lámpara", "lavadora", "licuadora", "librero", "limpieza", 
+                "llave inglesa", "mantenimiento", "martillo", "menajería", "mesa", 
+                "microondas", "mueble", "muebles", "ollas", "paint", "parlante", "pintado", 
+                "pintura", "platos", "plumber", "pyrex", "refrigeradora", "rent", "renta", 
+                "reparacion", "reparaciones", "ropero", "sartenes", "secadora", "silla", 
+                "sillón", "sofá", "taladro", "táper", "terma", "televisor", "tornillos", 
+                "utensilios", "vajilla", "vasos", "ventilador", "vivienda"
             ],
-            "Compras": [
-                "ropa", "clothes", "zapateria", "shoes", "tienda", "store", "mall",
-                "plaza", "boutique", "zara", "h&m", "forever21", "saga", "ripley",
-                "falabella", "oechsle", "paris", "amazon", "ebay", "mercadolibre",
-                "jockey", "real plaza", "cosmetico", "perfume", "maquillaje",
-                "makeup", "accesorio", "accessory", "reloj", "watch", "joya",
-                "jewelry", "regalo", "gift"
+            "Vestimenta": [
+                "abrigo", "accesorio", "accesorios", "accessory", "amazon", "anillo", 
+                "aretes", "arreglo", "bañador", "bata", "bermuda", "bikini", "billetera", 
+                "blusa", "bolso", "botas", "botines", "boutique", "bóxer", "brasier", 
+                "bufanda", "buzo", "calcetines", "calzado", "calzoncillo", "camisa", 
+                "camiseta", "cartera", "casaca", "chaleco", "chaqueta", "chompa", 
+                "cinturón", "clothes", "collar", "corbata", "correa", "costura", "denim", 
+                "deporte", "ebay", "enterizo", "entrenamiento", "falabella", "falda", 
+                "forever21", "gafas", "gift", "gorra", "gorro", "guantes", "gym", "h&m", 
+                "jean", "jewelry", "jockey", "joya", "joyas", "joyería", "lavandería", 
+                "leggings", "lentes", "makeup", "mall", "mantenimiento", "medias", 
+                "mercadolibre", "moccasines", "mochila", "moda", "natación", "oechsle", 
+                "outfit", "pantalón", "pantuflas", "paris", "pijama", "plaza", "polera", 
+                "polo", "prenda", "pulsera", "real plaza", "regalo", "reloj", "ripley", 
+                "ropa", "ropa deportiva", "ropa interior", "saco", "saga", "sandalias", 
+                "sastre", "sastrería", "shoes", "short", "sombrero", "sostén", "store", 
+                "suéter", "tacos", "terno", "textil", "tienda", "tintorería", "traje", 
+                "truza", "vestido", "vestimenta", "vestir", "watch", "zapatillas", 
+                "zapatero", "zapateria", "zapatos", "zara"
             ],
+
+            "Comunicaciones": [ 
+                "cable", "celular", "internet", "mobile", "phone", "telefono",
+                "tv", "telfonía", "claro", "entel", "bitel", "movistar", "starlink",
+                "cablevisión", "directv", 
+                "fibertel", "telecom", "telefonía", "telefonía móvil", "telefonía fija"
+            ],
+            
+            "Restaurantes y gastronomía": [
+                "alfresco", "almuerzo", "anticuchería", "anticuchos", "antojito", "asado", 
+                "bacán", "bar", "barra cevichera", "beber", "bembos", "blanca flor", 
+                "bodega", "breakfast", "burger", "burger king", "butifarra", "caminos del inca", 
+                "capriccio", "carl's jr", "carrito", "cebichería", "cevicheria", "ceviche", 
+                "chicha", "chicha morada", "chifa", "china wok", "chinawok", "chicharrones", 
+                "churros", "comida ambulante", "cena", "cerveza", "chicken", "d'onofrio", 
+                "delivery", "desayuno", "desayuno al paso", "didi food", "dinner", 
+                "domino's", "domo saltado", "don belisario", "donas", "donofrio", 
+                "donuts", "doomo saltado", "drink", "dunkin", "el buen gusto", "el chinito", 
+                "el muelle", "el pez on", "emoliente", "emolientero", "empanada", 
+                "empanadas", "empanadas paulistas", "food truck", "galletas", "grimanesa", 
+                "hamburguesa", "hamburguesería", "helados", "hikari", "ice cream", 
+                "jockey plaza", "kentucky", "kfc", "kiosko", "la casa de las empanadas", 
+                "la ibérica", "la iberica", "la leña", "la lucha", "la panca", "la rambla", 
+                "larcomar", "las canastas", "leche de tigre", "listo", "little caesars", 
+                "lunch", "macuca", "mall aventura", "mall del sur", "marisquería", 
+                "mcdonald's", "mcdonalds", "mediterraneo", "megaplaza", "mi barrunto", 
+                "minka", "minimarket", "munchis", "niqqu", "norky", "norkys", "open plaza", 
+                "otto grill", "oxxo", "pan con chicharrón", "papa john's", "papa rellena", 
+                "pardos chicken", "pasquale", "pecsa", "pedidosya", "perros y papas", 
+                "pescados capitales", "picanteria", "picarones", "piqueo", "piqueos", 
+                "pizza", "pizza hut", "plaza norte", "plaza san miguel", "pollo", 
+                "pollo a la brasa", "polleria", "popeyes", "pub", "punto azul", "puruchuco", 
+                "quiosco", "quinua", "rappi", "real plaza", "repsol shop", "restaurant", 
+                "rockys", "salaverry", "salchipapa", "salchipapas", "sanguchería", 
+                "sanguche", "sanguches", "santa anita", "sarita", "starbucks", "subway", 
+                "sushi", "taco bell", "tamales", "tambo", "terminal pesquero", 
+                "tía grimanesa", "tienda", "tío bobby", "villa chicken", "viva", "vlady"
+            ],
+            
+            "Hospedaje y viajes": [
+                "aeropuerto", "airbnb", "albergue", "alojamiento", "asia", "backpackers", 
+                "boleto", "booking", "cama", "canta", "churín", "cial", "clase ejecutiva", 
+                "costamar", "cruz del sur", "cusco", "despegar", "equipaje", "estancia", 
+                "excursión", "expedia", "full day", "habitación", "hospedaje", "hostal", 
+                "hotel", "inca rail", "itssa", "jetsmart", "jorge chávez", "lap", "latam", 
+                "lunahuaná", "machu picchu", "mancora", "motel", "móvil bus", "nuevo mundo", 
+                "oltursa", "paracas", "pasaje", "peru rail", "perubus", "posada", "redbus", 
+                "resort", "sky", "soyuz", "star perú", "suite", "tarapoto", "tepsa", 
+                "tour", "trivago", "turismo", "vacaciones", "viaje", "viva air", "vuelo"
+                
+            ],
+            
+            "Vicios y hobbies": [
+                "cerveza", "beer", "alcohol", "tabaco", "juegos", "hobbies",
+                "apuestas", "atlantic city", "bar", "betano", "betsson", "cartavio", 
+                "casino", "cerveza", "cigarro", "cigarrillo", "cocktail", "corona", 
+                "cristal", "cusqueña", "discoteca", "encendedor", "fiesta casino", 
+                "flor de caña", "ganadiario", "gin", "hamilton", "heineken", "inkabet", 
+                "inkabet", "johnnie walker", "licor", "lotería", "lucky strike", 
+                "majestic", "marlboro", "pilsen", "pisco", "queirolo", "ron", 
+                "tabaco", "tabernero", "tacama", "te apuesto", "tinka", "vape", 
+                "vapeador", "vino", "vodka", "whisky"
+                
+            ],
+            
+            "Higiene/Cuidado personal": [
+                "acondicionador", "afeitado", "algodón", "amarige", "aruma", "aussie", "avené", 
+                "avene", "avon", "axe", "babysec", "barba", "barber shop", "barbería", 
+                "belcorp", "belleza", "bioderma", "biogreen", "botica", "boticas perú", 
+                "burt's bees", "calvin klein", "cantu", "carefree", "carol's daughter", 
+                "cepa menstrual", "cepillo", "cerave", "cetaphil", "champú", "clean & clear", 
+                "clínica", "clinique", "colgate", "copa menstrual", "cortaúñas", "crema", 
+                "cuidado personal", "cyzone", "dentito", "dentífrico", "depilación", 
+                "desodorante", "dove", "dove men+care", "dr. bronner's", "e.l.f. cosmetics", 
+                "efasit", "elite", "elvive", "enjuague bucal", "ésika", "esika", "essence", 
+                "especialista", "eucerin", "farmacia", "fenty beauty", "garnier", "gillette", 
+                "glossier", "gnc", "h&s", "head & shoulders", "herbal essences", "herbivore", 
+                "hies", "higiene", "higiene femenina", "hinds", "huggies", "inkafarma", 
+                "isdin", "jabón", "johnson's", "johnsons", "kérastase", "kolynos", "kotex", 
+                "l'bel", "lbel", "l'oreal", "labnutrition", "lactacyd", "lady speed stick", 
+                "la roche posay", "laura mercier", "listerine", "loción", "lubriderm", 
+                "lush", "manicura", "maquillaje", "marco aldany", "maybelline", "mifarma", 
+                "montalvo", "moroccanoil", "natura", "neutrogena", "nivea", "nivea men", 
+                "nosotras", "nyx", "ob", "old spice", "oral-b", "oriflame", "pacifica", 
+                "pampers", "pantene", "pañales", "pañitos húmedos", "papel higiénico", 
+                "paracas", "pasta dental", "pedicura", "peluquería", "perfume", "philosophy", 
+                "pixi", "pro", "rekamier", "rexona", "sally beauty", "salón de belleza", 
+                "savital", "schick", "sedal", "sensodyne", "sephora", "shampoo", "soho", 
+                "spa", "speed stick", "st. ives", "suave", "talco", "tampones", "tarte", 
+                "the body shop", "toallas higiénicas", "too faced", "unique", "urban decay", 
+                "vasenol", "vichy", "yanbal", "yodora"
+                
+            ],
+            
             "Otros Gastos": []
         }
         
@@ -1738,7 +2067,7 @@ class DatabaseManager:
             "Servicios": 10,
             "Salud": 5,
             "Educación": 10,
-            "Compras": 15,
+            "Vestimenta": 15,
             "Otros Gastos": 5,
         }
 

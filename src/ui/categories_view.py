@@ -312,7 +312,7 @@ class CategoriesView(BaseView):
                                         color=ft.Colors.BLUE_700,
                                     ),
                                     ft.Text(
-                                        "Ejemplo: Para 'Alimentación' agrega: pizza, restaurant, supermercado, etc.",
+                                        "Ejemplo: Para 'Alimentación' agrega: pizza, supermercado, etc.",
                                         size=11,
                                         color=ft.Colors.GREY_600,
                                         italic=True,
@@ -507,7 +507,7 @@ class CategoriesView(BaseView):
                 "📇", "📌", "📍", "📎", "🖇️", "📏", "📐", "✂️",
                 "🗃️", "🗄️", "🗑️", "🔒", "🔓", "🔐", "🔏", "🖊️"
             ],
-            "Compras": [
+            "Vestimenta": [
                 "🎁", "🛍️", "🛒", "💳", "🏪", "🏬", "🏢", "💰",
                 "💵", "💴", "💶", "💷", "🪙", "💸", "🧾", "🎀"
             ],
@@ -693,7 +693,7 @@ class CategoriesView(BaseView):
         
         keywords_field = ft.TextField(
             label="Palabras clave (opcional)",
-            hint_text="Ejemplo: pizza, restaurant, comida (separadas por comas)",
+            hint_text="Ejemplo: pizza, comida (separadas por comas)",
             multiline=True,
             min_lines=2,
             max_lines=2,
@@ -915,7 +915,7 @@ class CategoriesView(BaseView):
                 "📇", "📌", "📍", "📎", "🖇️", "📏", "📐", "✂️",
                 "🗃️", "🗄️", "🗑️", "🔒", "🔓", "🔐", "🔏", "🖊️"
             ],
-            "Compras": [
+            "Vestimenta": [
                 "🎁", "🛍️", "🛒", "💳", "🏪", "🏬", "🏢", "💰",
                 "💵", "💴", "💶", "💷", "🪙", "💸", "🧾", "🎀"
             ],
@@ -1327,27 +1327,44 @@ class CategoriesView(BaseView):
             """
             ✅ INTELIGENTE: Porcentajes fijos predefinidos
             
-            Alimentación: 30%
-            Vivienda: 20%
-            Educación: 15%
-            Transporte: 10%
-            Salud: 5%
-            Compras: 5%
-            Entretenimiento: 5%
-            Servicios: 5%
-            Otros Gastos: 5%
+            "Alimentación": 25.0,
+            "Transporte": 10.0,
+            "Entretenimiento" : 2.5,
+            "Servicios": 21.0,
+            "Salud": 8.0,
+            "Educación" : 15.0,
+            "Vivienda y equipos": 3.0,
+            "Vestimenta": 3.0,
+            "Comunicaciones": 3.0,
+            "Restaurantes y gastronomía": .0,
+            "Hospedaje y viajes": 0.1,
+            "Vicios y hobbies": 0.1,,
+            "Higiene/Cuidado personal" : 0.3,
+            "Otros Gastos" : 5.0,
+
             """
             # Porcentajes fijos
+            
+            
             smart_distribution = {
-                "Alimentación": 30.0,
-                "Vivienda": 20.0,
-                "Educación": 15.0,
+                
+                
+                "Alimentación": 25.0,
                 "Transporte": 10.0,
-                "Salud": 5.0,
-                "Compras": 5.0,
-                "Entretenimiento": 5.0,
-                "Servicios": 5.0,
-                "Otros Gastos": 5.0,
+                "Entretenimiento" : 2.5,
+                "Servicios": 21.0,
+                "Salud": 8.0,
+                "Educación" : 15.0,
+                "Vivienda y equipos": 3.0,
+                "Vestimenta": 3.0,
+                "Comunicaciones": 3.0,
+                "Restaurantes y gastronomía": .0,
+                "Hospedaje y viajes": 0.1,
+                "Vicios y hobbies": 0.1,
+                "Higiene/Cuidado personal" : 0.3,
+                "Otros Gastos" : 5.0,
+                
+                
             }
             
             # Mapear categorías a sus IDs

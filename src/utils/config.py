@@ -338,6 +338,8 @@ except Exception as e:
 
 # Colores para categorías
 CATEGORY_COLORS = {
+    
+    
     "Alimentos": "#FF5722",
     "Transporte": "#3F51B5",
     "Entretenimiento": "#9C27B0",

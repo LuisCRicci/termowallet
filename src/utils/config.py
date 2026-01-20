@@ -15,7 +15,7 @@ class Config:
     # Información de la aplicación
     APP_NAME = "TermoWallet"
     APP_VERSION = "1.0.1"
-    APP_ORG = "com.termowallet.app"
+    APP_ORG = "com.flet.termowallet"
 
     # ✅ DETECCIÓN DE PLATAFORMA SIMPLE Y SEGURA (SIN JNIUS)
     @classmethod

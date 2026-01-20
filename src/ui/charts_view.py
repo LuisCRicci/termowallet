@@ -1,6 +1,5 @@
 """
-Vista de gráficos y análisis - ✅ CON RANGO DE FECHAS FUNCIONAL
-Archivo: src/ui/charts_view.py
+Vista de gráficos - ✅ CON CALLBACKS FUNCIONANDO
 """
 
 import flet as ft
@@ -24,9 +23,6 @@ class ChartsView(BaseView):
         self.on_month_change = on_month_change
         self.report_generator = ReportGenerator(db_manager, page=self.page)
         
-        # Variables de estado para el reporte
-        self.pending_report_type = None
-        self.pending_format = None
         self.custom_start_date = None
         self.custom_end_date = None
 
@@ -47,13 +43,11 @@ class ChartsView(BaseView):
         self.on_month_change(self.current_month, self.current_year)
 
     def show_report_dialog(self, e):
-        """Muestra diálogo para seleccionar tipo de reporte con rango de fechas"""
+        """Muestra diálogo para seleccionar tipo de reporte"""
         
-        # ✅ Variables para almacenar las fechas seleccionadas
         selected_start_date = [None]
         selected_end_date = [None]
         
-        # ✅ Textos que mostrarán las fechas seleccionadas
         start_date_text = ft.Text(
             "Selecciona fecha",
             size=14,
@@ -66,31 +60,24 @@ class ChartsView(BaseView):
             color=ft.Colors.GREY_500,
         )
         
-        # ✅ CORRECCIÓN: Funciones para manejar la selección
         def on_start_date_change(ev):
-            """Callback cuando cambia la fecha de inicio"""
             if ev.control.value:
                 selected_start_date[0] = ev.control.value
                 start_date_text.value = ev.control.value.strftime("%d/%m/%Y")
                 start_date_text.color = ft.Colors.BLACK
                 start_date_text.update()
-                print(f"📅 Fecha inicio: {start_date_text.value}")
         
         def on_end_date_change(ev):
-            """Callback cuando cambia la fecha de fin"""
             if ev.control.value:
                 selected_end_date[0] = ev.control.value
                 end_date_text.value = ev.control.value.strftime("%d/%m/%Y")
                 end_date_text.color = ft.Colors.BLACK
                 end_date_text.update()
-                print(f"📅 Fecha fin: {end_date_text.value}")
         
-        # ✅ CORRECCIÓN: DatePickers en ESPAÑOL
         start_date_picker = ft.DatePicker(
             on_change=on_start_date_change,
             first_date=datetime(2020, 1, 1),
             last_date=datetime.now() + timedelta(days=365),
-            # 🌐 Configuración en español
             cancel_text="Cancelar",
             confirm_text="Aceptar",
             help_text="Selecciona la fecha de inicio",
@@ -101,36 +88,30 @@ class ChartsView(BaseView):
             on_change=on_end_date_change,
             first_date=datetime(2020, 1, 1),
             last_date=datetime.now() + timedelta(days=365),
-            # 🌐 Configuración en español
             cancel_text="Cancelar",
             confirm_text="Aceptar",
             help_text="Selecciona la fecha de fin",
             field_label_text="Fecha",
         )
         
-        # ✅ CORRECCIÓN: Funciones para abrir los pickers
         def open_start_picker(e):
-            """Abre el picker de fecha de inicio"""
             start_date_picker.open = True
             self.page.update()
         
         def open_end_picker(e):
-            """Abre el picker de fecha de fin"""
             end_date_picker.open = True
             self.page.update()
         
-        # Agregar DatePickers al overlay
         self.page.overlay.append(start_date_picker)
         self.page.overlay.append(end_date_picker)
         self.page.update()
         
-        # ✅ Botones para abrir los DatePickers
         start_date_button = ft.OutlinedButton(
             content=ft.Row([
                 ft.Icon(ft.Icons.CALENDAR_TODAY, size=20),
                 start_date_text,
             ], spacing=10),
-            on_click=open_start_picker,  # ✅ Usar función sin paréntesis
+            on_click=open_start_picker,
             width=200,
             height=50,
         )
@@ -140,12 +121,11 @@ class ChartsView(BaseView):
                 ft.Icon(ft.Icons.CALENDAR_TODAY, size=20),
                 end_date_text,
             ], spacing=10),
-            on_click=open_end_picker,  # ✅ Usar función sin paréntesis
+            on_click=open_end_picker,
             width=200,
             height=50,
         )
         
-        # Contenedor para el rango de fechas (inicialmente oculto)
         date_range_container = ft.Container(
             content=ft.Column([
                 ft.Text("Fecha de inicio", size=12, color=ft.Colors.GREY_700, weight=ft.FontWeight.BOLD),
@@ -168,7 +148,6 @@ class ChartsView(BaseView):
         )
         
         def on_report_type_change(e):
-            """Muestra/oculta el selector de fechas según el tipo de reporte"""
             date_range_container.visible = (report_type.value == "custom")
             date_range_container.update()
         
@@ -200,82 +179,70 @@ class ChartsView(BaseView):
         )
 
         def generate_report(e):
-            """Genera el reporte con validación de fechas"""
+            """✅ CORREGIDO: Genera el reporte con callbacks funcionando"""
             
-            # Validar rango personalizado si está seleccionado
+            # Validar rango personalizado
             if report_type.value == "custom":
                 if not selected_start_date[0] or not selected_end_date[0]:
-                    self.show_snackbar(
-                        "❌ Por favor selecciona ambas fechas",
-                        error=True
-                    )
+                    self.show_snackbar("❌ Por favor selecciona ambas fechas", error=True)
                     return
                 
-                # Validar que la fecha de inicio sea menor que la de fin
                 if selected_start_date[0] > selected_end_date[0]:
-                    self.show_snackbar(
-                        "❌ La fecha de inicio debe ser anterior a la fecha de fin",
-                        error=True
-                    )
+                    self.show_snackbar("❌ La fecha de inicio debe ser anterior a la fecha de fin", error=True)
                     return
                 
-                # Guardar fechas
                 self.custom_start_date = selected_start_date[0]
                 self.custom_end_date = selected_end_date[0]
             
-            # Cerrar diálogo y limpiar DatePickers
+            # Limpiar DatePickers
             try:
                 self.page.overlay.remove(start_date_picker)
                 self.page.overlay.remove(end_date_picker)
             except:
                 pass
             
+            # Cerrar diálogo de selección
             self.close_dialog()
-            
-            self.pending_report_type = report_type.value
-            self.pending_format = format_type.value
-            
-            print(f"\n{'='*60}")
-            print(f"📋 GENERANDO REPORTE")
-            print(f"{'='*60}")
-            print(f"   Tipo: {self.pending_report_type}")
-            print(f"   Formato: {self.pending_format}")
-            if self.pending_report_type == "custom":
-                print(f"   Desde: {self.custom_start_date.strftime('%d/%m/%Y')}")
-                print(f"   Hasta: {self.custom_end_date.strftime('%d/%m/%Y')}")
-            print(f"   Plataforma: {'Android' if Config.is_android() else 'Desktop'}")
-            print(f"{'='*60}\n")
             
             # Mostrar loading
             self.show_loading("Generando reporte...")
             
-            # Generar según tipo
-            if self.pending_report_type == "monthly":
+            print(f"\n{'='*60}")
+            print(f"📋 GENERANDO REPORTE")
+            print(f"{'='*60}")
+            print(f"   Tipo: {report_type.value}")
+            print(f"   Formato: {format_type.value}")
+            if report_type.value == "custom":
+                print(f"   Desde: {self.custom_start_date.strftime('%d/%m/%Y')}")
+                print(f"   Hasta: {self.custom_end_date.strftime('%d/%m/%Y')}")
+            print(f"{'='*60}\n")
+            
+            # ✅ Generar según tipo
+            if report_type.value == "monthly":
                 self.report_generator.generate_monthly_report(
                     year=self.current_year,
                     month=self.current_month,
-                    format=self.pending_format,
+                    format=format_type.value,
                     callback_success=self._on_report_success,
                     callback_error=self._on_report_error
                 )
-            elif self.pending_report_type == "annual":
+            elif report_type.value == "annual":
                 self.report_generator.generate_annual_report(
                     year=self.current_year,
-                    format=self.pending_format,
+                    format=format_type.value,
                     callback_success=self._on_report_success,
                     callback_error=self._on_report_error
                 )
-            elif self.pending_report_type == "custom":
+            elif report_type.value == "custom":
                 self.report_generator.generate_custom_range_report(
                     start_date=self.custom_start_date,
                     end_date=self.custom_end_date,
-                    format=self.pending_format,
+                    format=format_type.value,
                     callback_success=self._on_report_success,
                     callback_error=self._on_report_error
                 )
 
         def close_dialog_and_cleanup(e):
-            """Cierra el diálogo y limpia los DatePickers"""
             try:
                 self.page.overlay.remove(start_date_picker)
                 self.page.overlay.remove(end_date_picker)
@@ -299,11 +266,11 @@ class ChartsView(BaseView):
                     ft.Container(
                         content=ft.Column([
                             ft.Text(
-                                "📱 En Desktop: Podrás elegir dónde guardar",
+                                "📱 En Android: El reporte se abrirá automáticamente",
                                 size=12,
                                 color=ft.Colors.BLUE_700,
-                            ) if not Config.is_android() else ft.Text(
-                                "💻 En Android: Podrás elegir dónde guardar",
+                            ) if Config.is_android() else ft.Text(
+                                "💻 En Desktop: El reporte se abrirá automáticamente",
                                 size=12,
                                 color=ft.Colors.BLUE_700,
                             ),
@@ -344,54 +311,70 @@ class ChartsView(BaseView):
         self.show_dialog(dialog)
     
     def _on_report_success(self, filepath: str, message: str):
-        """Callback cuando el reporte se genera exitosamente"""
-        print(f"✅ Reporte generado: {filepath}")
+        """✅ CORREGIDO: Callback cuando el reporte se genera exitosamente"""
+        print(f"✅ _on_report_success llamado")
+        print(f"   Filepath: {filepath}")
+        print(f"   Message: {message}")
         
+        # ✅ Cerrar el diálogo de "Generando reporte..."
         self.close_dialog()
+        
+        # ✅ Mostrar mensaje de éxito
+        self.show_snackbar("✅ " + message, error=False)
+        
+        # ✅ Mostrar diálogo informativo
         self.show_success_dialog(filepath, message)
     
     def _on_report_error(self, error_message: str):
-        """Callback cuando hay error al generar reporte"""
-        print(f"❌ Error: {error_message}")
+        """✅ CORREGIDO: Callback cuando hay error"""
+        print(f"❌ _on_report_error llamado: {error_message}")
         
+        # ✅ Cerrar el diálogo de "Generando reporte..."
         self.close_dialog()
+        
+        # ✅ Mostrar error
         self.show_snackbar(error_message, error=True)
     
     def show_success_dialog(self, filepath: str, message: str):
-        """Muestra diálogo de éxito con opciones"""
-        
-        is_in_downloads = "/Download/" in filepath or "/download/" in filepath.lower()
+        """Muestra diálogo de éxito"""
         
         content_items = [
-            ft.Text(message, size=14, selectable=True),
+            ft.Text(
+                "📄 El reporte se ha generado correctamente",
+                size=16,
+                weight=ft.FontWeight.BOLD,
+            ),
+            ft.Container(height=10),
+            ft.Text(message, size=14, color=ft.Colors.GREY_700),
         ]
         
         if Config.is_android():
-            if is_in_downloads:
-                content_items.append(
-                    ft.Container(
-                        content=ft.Column([
-                            ft.Text(
-                                "📱 Cómo acceder al archivo:",
-                                size=13,
-                                weight=ft.FontWeight.BOLD,
-                                color=ft.Colors.BLUE_700,
-                            ),
-                            ft.Text("1. Abre la app 'Archivos' o 'Mis archivos'", size=12, color=ft.Colors.GREY_700),
-                            ft.Text("2. Ve a 'Descargas' o 'Download'", size=12, color=ft.Colors.GREY_700),
-                            ft.Text("3. Busca tu reporte", size=12, color=ft.Colors.GREY_700),
-                        ], spacing=5),
-                        padding=15,
-                        bgcolor=ft.Colors.BLUE_50,
-                        border_radius=8,
-                        margin=ft.margin.only(top=10),
-                    )
+            content_items.append(
+                ft.Container(
+                    content=ft.Column([
+                        ft.Text(
+                            "📱 El archivo debería abrirse automáticamente",
+                            size=13,
+                            weight=ft.FontWeight.BOLD,
+                            color=ft.Colors.BLUE_700,
+                        ),
+                        ft.Text(
+                            "Si no se abre, búscalo en la carpeta de Descargas",
+                            size=12,
+                            color=ft.Colors.GREY_600,
+                        ),
+                    ], spacing=5),
+                    padding=15,
+                    bgcolor=ft.Colors.BLUE_50,
+                    border_radius=8,
+                    margin=ft.margin.only(top=10),
                 )
+            )
         else:
             content_items.append(
                 ft.Container(
                     content=ft.Text(
-                        "✅ Puedes abrir el archivo directamente desde tu explorador",
+                        "💻 El archivo se ha guardado en la carpeta temporal",
                         size=12,
                         color=ft.Colors.GREY_600,
                         italic=True,
@@ -423,6 +406,8 @@ class ChartsView(BaseView):
 
         self.show_dialog(dialog)
 
+    # ... (resto de métodos sin cambios)
+    
     def _create_category_chart(self, expenses_data: list):
         """Crea gráfico de gastos por categoría"""
         total = sum(item["total"] for item in expenses_data)

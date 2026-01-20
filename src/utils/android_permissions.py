@@ -35,6 +35,16 @@ def request_storage_permissions():
     """Alias de request_permissions()"""
     return request_permissions()
 
+def get_public_storage_path():
+    """Ruta accesible para el selector de compartir en Android 9"""
+    if sys.platform == "android" or hasattr(sys, 'getandroidapilevel'):
+        # Ruta estándar para que el FileProvider comparta sin errores
+        path = "/sdcard/Android/data/com.flet.termowallet/cache"
+        if not os.path.exists(path):
+            os.makedirs(path, exist_ok=True)
+        return path
+    import tempfile
+    return tempfile.gettempdir()
 
 def get_app_storage_path():
     """
@@ -61,7 +71,7 @@ def get_app_storage_path():
         pass
     
     # Fallback
-    fallback = "/data/data/com.termowallet.app/files"
+    fallback = "/data/data/com.flet.termowallet/files"
     print(f"📁 Almacenamiento de app (fallback): {fallback}")
     return fallback
 

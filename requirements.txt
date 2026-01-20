@@ -22,6 +22,10 @@ certifi>=2023.7.22
 # Instalación:
 # pip install -r requirements.txt
 
+#correr en modo desarrollo:
+# flet run
+
+
 # Para compilar APK:
 # flet build apk --verbose
 

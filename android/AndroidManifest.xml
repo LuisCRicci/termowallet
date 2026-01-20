@@ -4,7 +4,7 @@ Archivo: android/app/src/main/AndroidManifest.xml
 Configuración de permisos para TermoWallet en Android
 -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.termowallet.app">
+    package="com.flet.termowallet">
 
     <!-- ✅ Permisos necesarios para leer/escribir archivos -->
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
@@ -23,7 +23,7 @@ Configuración de permisos para TermoWallet en Android
         <!-- ✅ FileProvider para compartir archivos -->
         <provider
             android:name="androidx.core.content.FileProvider"
-            android:authorities="${applicationId}.fileprovider"
+            android:authorities="com.flet.termowallet.fileprovider" 
             android:exported="false"
             android:grantUriPermissions="true">
             <meta-data

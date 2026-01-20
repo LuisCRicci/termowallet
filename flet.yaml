@@ -1,6 +1,6 @@
 name: termowallet
 description: Aplicación de gestión de gastos personales
-version: 1.0.2
+version: 1.0.3
 
 # ✅ CONFIGURACIÓN DE ICONOS
 flutter:
@@ -9,7 +9,7 @@ flutter:
     adaptive_icon_foreground: "assets/icon_foreground.png"
     adaptive_icon_background: "#FFFFFF"
 
-# ✅ CONFIGURACIÓN ANDROID
+# ✅ CONFIGURACIÓN ANDROID CON FILEPROVIDER
 android:
   permissions:
     - android.permission.INTERNET
@@ -23,14 +23,28 @@ android:
   
   # Identificador de la app
   package: com.flet.termowallet
+  main_module: main.py
   
-  # ✅ Gradle dependencies mínimas
+  # ✅ NUEVO: Configuración de FileProvider
+  # Esto permite compartir archivos de forma segura en Android 7+
+  manifest_xml: |
+    <provider
+        android:name="androidx.core.content.FileProvider"
+        android:authorities="com.flet.termowallet.fileprovider"
+        android:exported="false"
+        android:grantUriPermissions="true">
+        <meta-data
+            android:name="android.support.FILE_PROVIDER_PATHS"
+            android:resource="@xml/file_paths" />
+    </provider>
+  
+  # ✅ Gradle dependencies
   gradle:
     dependencies:
       - androidx.core:core:1.12.0
       - androidx.appcompat:appcompat:1.6.1
 
-# ✅ DEPENDENCIAS PYTHON (SIN jnius, SIN cryptography)
+# ✅ DEPENDENCIAS PYTHON
 requirements:
   - sqlalchemy>=2.0.0
   - openpyxl>=3.1.0
